@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>AI Lucky Pinball - 관리자 목업</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="page">
+
+  <header class="top">
+    <h1>🛠 관리자 화면</h1>
+    <p>참가자 · 게임 · 오류 로그 조회 및 가중치 조정(예정) — 정적 목업, 인증 없음(MVP 한정).</p>
+  </header>
+
+  <nav class="tabs">
+    <a href="index.html">참가자 / 게임 화면</a>
+    <a class="active" href="admin.html">관리자 화면</a>
+  </nav>
+
+  <!-- 참가자 목록 -->
+  <section class="panel">
+    <h2>참가자 목록 <span class="badge">GET /api/admin/players</span></h2>
+    <p class="desc">각 참가자의 운세 이력(회차별 최종 점수)을 함께 보여줍니다.</p>
+    <table class="admin-table">
+      <thead>
+        <tr><th>ID</th><th>이름</th><th>생년월일</th><th>운세 이력 (날짜 · 점수)</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1</td><td>홍길동</td><td>1995-04-12</td>
+          <td>09-20 · 55 &nbsp;→&nbsp; 09-21 · 60 &nbsp;→&nbsp; 09-22 · 92</td>
+        </tr>
+        <tr>
+          <td>2</td><td>김유나</td><td>2000-11-03</td>
+          <td>09-22 · 68 (첫 방문)</td>
+        </tr>
+        <tr>
+          <td>3</td><td>박도윤</td><td>1988-07-22</td>
+          <td>09-19 · 41 &nbsp;→&nbsp; 09-22 · 47</td>
+        </tr>
+        <tr>
+          <td>4</td><td>이서연</td><td>1993-02-14</td>
+          <td>09-18 · 22 &nbsp;→&nbsp; 09-20 · 30 &nbsp;→&nbsp; 09-22 · 28</td>
+        </tr>
+        <tr>
+          <td>5</td><td>최민준</td><td>2001-09-30</td>
+          <td>09-22 · 12 (첫 방문)</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- 게임 결과 -->
+  <section class="panel">
+    <h2>게임 결과 목록 <span class="badge">GET /api/admin/games</span></h2>
+    <table class="admin-table">
+      <thead>
+        <tr><th>게임 ID</th><th>당첨자 (최종 순위)</th><th>참가 인원</th><th>생성 시각</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>b3f1c2b0-...</td><td>홍길동</td><td>5</td><td>2026-09-22 10:03</td></tr>
+        <tr><td>a1e9d3f4-...</td><td>김유나</td><td>4</td><td>2026-09-21 19:41</td></tr>
+        <tr><td>7c2b8a10-...</td><td>박도윤</td><td>6</td><td>2026-09-20 21:12</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- 오류 로그 -->
+  <section class="panel">
+    <h2>오류 로그 <span class="badge">GET /api/admin/logs</span></h2>
+    <p class="desc">서버 재시작 전까지만 유지되는 인메모리 로그입니다 (영속화는 Phase 2).</p>
+    <div class="log-list">
+      <div class="log-item"><span class="path">POST /api/fortune</span>Player not found: 99 · 2026-09-22 10:05:00</div>
+      <div class="log-item"><span class="path">POST /api/game/result</span>Game already has a reported result: 7c2b8a10-... · 2026-09-20 21:15:02</div>
+      <div class="log-item"><span class="path">POST /api/game/create</span>participantIds must contain 2 to 8 players · 2026-09-19 14:02:44</div>
+    </div>
+  </section>
+
+  <!-- 가중치 조정 (스텁) -->
+  <section class="panel">
+    <h2>가중치 임의 조정 <span class="badge wip">준비 중 · Phase 2</span></h2>
+    <p class="desc">호출 시 현재는 <code>501 Not Implemented</code>를 반환합니다. 화면 골격만 미리 배치해뒀습니다.</p>
+    <div class="override-form">
+      <input placeholder="playerId" value="1" disabled>
+      <input placeholder="조정할 점수 (0-100)" value="90" disabled>
+      <button disabled>적용 (준비 중)</button>
+    </div>
+  </section>
+
+</div>
+</body>
+</html>

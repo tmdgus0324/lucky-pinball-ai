@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>AI Lucky Pinball - 목업</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="page">
+
+  <header class="top">
+    <h1>🎱 AI Lucky Pinball</h1>
+    <p>오늘 운이 없는 사람에게 작은 행운을 — 이 화면은 실제 데이터가 연결되지 않은 정적 목업입니다.</p>
+  </header>
+
+  <nav class="tabs">
+    <a class="active" href="index.html">참가자 / 게임 화면</a>
+    <a href="admin.html">관리자 화면</a>
+  </nav>
+
+  <!-- 1. 참가자 등록 -->
+  <section class="panel">
+    <h2>1. 참가자 등록 <span class="badge">최대 8명</span></h2>
+    <p class="desc">이름(또는 별칭)과 생년월일을 입력해 참가자를 등록합니다.</p>
+
+    <div class="reg-form">
+      <input name="name" placeholder="이름 / 별칭" value="새 참가자" disabled>
+      <input name="birthDate" placeholder="생년월일 (YYYY-MM-DD)" value="1998-01-01" disabled>
+      <button disabled>참가자 등록</button>
+    </div>
+
+    <div class="player-list">
+      <span class="player-chip">홍길동 · 1995-04-12</span>
+      <span class="player-chip">김유나 · 2000-11-03</span>
+      <span class="player-chip">박도윤 · 1988-07-22</span>
+      <span class="player-chip">이서연 · 1993-02-14</span>
+      <span class="player-chip">최민준 · 2001-09-30</span>
+    </div>
+  </section>
+
+  <!-- 2. 운세 확인 -->
+  <section class="panel">
+    <h2>2. 오늘의 운세 &amp; 버프</h2>
+    <p class="desc">버프는 <strong>시작 높이</strong> 한 가지만 차등을 둡니다 — 운세가 좋을수록 맨 위(결승선에서 먼 곳)에서, 운세가 안 좋을수록 더 아래쪽(결승선에 가까운 곳)에서 출발합니다. 결승선을 먼저 통과할수록 "당첨"에서 멀어지므로, 오늘 운이 없는 사람이 더 유리하게 설계했습니다.</p>
+
+    <div class="fortune-grid">
+      <div class="fortune-card tier-0">
+        <div class="name">홍길동</div>
+        <div class="score">92<span style="font-size:12px;color:var(--muted)">점</span></div>
+        <div class="message">"오늘은 무난하게 흘러갑니다"</div>
+        <div class="stats">
+          <span>버프 없음</span><span>시작 높이 +0</span>
+        </div>
+      </div>
+
+      <div class="fortune-card tier-1">
+        <div class="name">김유나</div>
+        <div class="score">68<span style="font-size:12px;color:var(--muted)">점</span></div>
+        <div class="message">"작은 기회가 찾아옵니다"</div>
+        <div class="stats">
+          <span>버프 1</span><span>시작 높이 +15</span>
+        </div>
+      </div>
+
+      <div class="fortune-card tier-2">
+        <div class="name">박도윤</div>
+        <div class="score">47<span style="font-size:12px;color:var(--muted)">점</span></div>
+        <div class="message">"조금 조심스러운 하루"</div>
+        <div class="stats">
+          <span>버프 2</span><span>시작 높이 +30</span>
+        </div>
+      </div>
+
+      <div class="fortune-card tier-3">
+        <div class="name">이서연</div>
+        <div class="score">28<span style="font-size:12px;color:var(--muted)">점</span></div>
+        <div class="message">"오늘은 신중하게, 곧 나아집니다"</div>
+        <div class="stats">
+          <span>버프 3</span><span>시작 높이 +45</span>
+        </div>
+      </div>
+
+      <div class="fortune-card tier-4">
+        <div class="name">최민준</div>
+        <div class="score">12<span style="font-size:12px;color:var(--muted)">점</span></div>
+        <div class="message">"큰 행운의 별이 지켜주고 있어요"</div>
+        <div class="stats">
+          <span>버프 4</span><span>시작 높이 +60</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3. 핀볼 맵 -->
+  <section class="panel">
+    <h2>3. 게임 진행 — 핀볼 맵 <span class="badge">클래식 갈톤보드 (목업)</span></h2>
+    <p class="desc">갈톤보드/플린코 스타일의 못(peg) 배열을 통과해 <strong>결승선을 먼저 통과하는 순서</strong>로 순위가 정해집니다. 가장 마지막에 결승선을 통과한 참가자가 "당첨자"가 됩니다. 아래는 게임이 한창 진행 중인 상태(일부는 이미 완주)를 정적으로 표현한 예시입니다.</p>
+
+    <div class="game-layout">
+      <div class="pinball-board">
+        <div class="zone-label drop">낙하 시작 구역</div>
+        <div class="peg-field"></div>
+        <div class="finish-line"><span class="label">결승선</span></div>
+
+        <div class="ball tier-0" style="left:70px; top:40px; background:#6b7280;">홍길동</div>
+        <div class="ball tier-1" style="left:160px; top:150px; background:#4ade80;">김유나</div>
+        <div class="ball tier-2 finished" style="left:250px; top:475px; background:#38bdf8;">박도윤</div>
+        <div class="ball tier-3 finished" style="left:190px; top:500px; background:#a78bfa;">이서연</div>
+        <div class="ball tier-4 finished" style="left:280px; top:520px; background:#ffd166;">최민준</div>
+      </div>
+
+      <aside class="rank-panel">
+        <h3>실시간 순위</h3>
+        <div class="rank-item"><span class="position">1</span> 최민준</div>
+        <div class="rank-item"><span class="position">2</span> 이서연</div>
+        <div class="rank-item"><span class="position">3</span> 박도윤</div>
+        <div class="rank-item pending"><span class="position">?</span> 김유나 (진행 중)</div>
+        <div class="rank-item pending"><span class="position">?</span> 홍길동 (진행 중)</div>
+      </aside>
+    </div>
+  </section>
+
+  <!-- 4. 당첨자 발표 -->
+  <section class="panel">
+    <h2>4. 결과</h2>
+    <div class="result-banner">
+      <div class="bell">🔔</div>
+      <div class="selected-name">홍길동 님 당첨!</div>
+      <div class="sub">참가자 5명 중 가장 마지막으로 결승선 통과 · 게임 ID: b3f1c2b0-...</div>
+    </div>
+  </section>
+
+</div>
+</body>
+</html>

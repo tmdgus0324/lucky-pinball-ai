@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI Lucky Pinball - 관리자</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="page">
+
+  <header class="top">
+    <h1>🛠 관리자 화면</h1>
+    <p>참가자 · 게임 · 오류 로그 조회 및 가중치 조정(예정) — 인증 없음(MVP 한정).</p>
+  </header>
+
+  <nav class="tabs">
+    <a href="index.html">참가자 / 게임 화면</a>
+    <a class="active" href="admin.html">관리자 화면</a>
+  </nav>
+
+  <!-- 참가자 목록 -->
+  <section class="panel">
+    <h2>참가자 목록 <span class="badge">GET /api/admin/players</span></h2>
+    <p class="desc">각 참가자의 운세 이력(회차별 점수)을 함께 보여줍니다.</p>
+    <table class="admin-table">
+      <thead>
+        <tr><th>ID</th><th>이름</th><th>생년월일</th><th>운세 이력 (날짜 · 점수)</th></tr>
+      </thead>
+      <tbody id="playersTableBody">
+        <tr><td colspan="4">불러오는 중...</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- 게임 결과 -->
+  <section class="panel">
+    <h2>게임 결과 목록 <span class="badge">GET /api/admin/games</span></h2>
+    <table class="admin-table">
+      <thead>
+        <tr><th>게임 ID</th><th>당첨자</th><th>참가 인원</th><th>생성 시각</th></tr>
+      </thead>
+      <tbody id="gamesTableBody">
+        <tr><td colspan="4">불러오는 중...</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- 오류 로그 -->
+  <section class="panel">
+    <h2>오류 로그 <span class="badge">GET /api/admin/logs</span></h2>
+    <p class="desc">서버 재시작 전까지만 유지되는 인메모리 로그입니다 (영속화는 Phase 2).</p>
+    <div class="log-list" id="logList">불러오는 중...</div>
+  </section>
+
+  <!-- 가중치 조정 (스텁) -->
+  <section class="panel">
+    <h2>가중치 임의 조정 <span class="badge wip">준비 중 · Phase 2</span></h2>
+    <p class="desc">호출 시 현재는 <code>501 Not Implemented</code>를 반환합니다.</p>
+    <form id="overrideForm" class="override-form">
+      <input type="number" name="playerId" placeholder="playerId" required>
+      <input type="number" name="overrideScore" placeholder="조정할 점수 (0-100)" min="0" max="100" required>
+      <button type="submit">적용</button>
+    </form>
+    <p class="status-text" id="overrideStatus"></p>
+  </section>
+
+</div>
+
+<script src="js/api.js"></script>
+<script src="js/admin.js"></script>
+</body>
+</html>
