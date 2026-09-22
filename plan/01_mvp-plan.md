@@ -2,7 +2,7 @@
 
 > 이 문서는 코딩을 시작하기 전에 확정한 MVP 범위와 설계 결정을 정리한 것이다. 실제 구현(백엔드 Gradle 프로젝트, 프론트엔드 실동작 JS)은 이 문서와 `02_api-spec.md`, `03_db-schema.md`, `mockups/`에 대한 검토가 끝난 뒤 별도로 진행한다.
 >
-> **읽는 순서**: `01_mvp-plan.md`(이 문서, 전체 개요) → `02_api-spec.md`(API 상세) → `03_db-schema.md`(DB 스키마) → `04_pinball-map-design.md`(핀볼 맵/물리엔진 상세).
+> **읽는 순서**: `01_mvp-plan.md`(이 문서, 전체 개요) → `02_api-spec.md`(API 상세) → `03_db-schema.md`(DB 스키마) → `04_pinball-map-design.md`(핀볼 맵/물리엔진 상세) → `05_improvement-backlog.md`(착수 전 개선 백로그) → `06_react-migration-plan.md`(착수 전 React 마이그레이션 계획, 둘 다 진행 요청 시 시작).
 
 ## 1. 목표와 범위
 
