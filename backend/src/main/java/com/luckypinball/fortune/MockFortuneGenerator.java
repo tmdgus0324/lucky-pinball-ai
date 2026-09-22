@@ -3,14 +3,13 @@ package com.luckypinball.fortune;
 import java.time.LocalDate;
 import java.util.Objects;
 import java.util.Random;
-import org.springframework.stereotype.Service;
 
 /**
- * 실제 OpenAI 연동 전, 규칙 기반으로 오늘의 운세를 만들어내는 목(mock) 구현체.
- * name + birthDate + 오늘 날짜를 시드로 사용해서, 같은 사람이 같은 날 다시 조회하면
- * 항상 같은 결과가 나오도록 결정적으로 설계했다 (실제 캐시 키와 동일한 성질).
+ * 규칙 기반으로 오늘의 운세를 만들어내는 목(mock) 구현체.
+ * 실제 서비스에서는 {@link ClaudeFortuneGenerator}로 교체됐고, 이 클래스는 더 이상
+ * 스프링 빈으로 등록되지 않는다 (@Service 제거) — 단위 테스트에서 API 호출/키 없이
+ * BuffCalculator 연동 로직 등을 검증할 때 직접 new해서 쓰는 용도로 남겨뒀다.
  */
-@Service
 public class MockFortuneGenerator implements FortuneService {
 
     private static final String[] MESSAGES = {

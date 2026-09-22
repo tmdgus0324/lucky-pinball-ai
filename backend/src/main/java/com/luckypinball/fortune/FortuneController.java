@@ -28,14 +28,16 @@ public class FortuneController {
 
     public record FortuneResponse(
             Long playerId,
-            int fortuneScore,
-            int luckyNumber,
+            Integer fortuneScore,
+            Integer luckyNumber,
             String fortuneMessage,
-            Buff buff
+            Buff buff,
+            String source
     ) {
         static FortuneResponse from(FortuneQueryResult result) {
             return new FortuneResponse(
-                    result.playerId(), result.fortuneScore(), result.luckyNumber(), result.fortuneMessage(), result.buff());
+                    result.playerId(), result.fortuneScore(), result.luckyNumber(), result.fortuneMessage(),
+                    result.buff(), result.source());
         }
     }
 }

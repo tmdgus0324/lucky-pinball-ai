@@ -20,7 +20,7 @@
           const history = player.fortuneHistory.length
             ? player.fortuneHistory.map((h) => `${h.createdDate} · ${h.fortuneScore}`).join(' &nbsp;→&nbsp; ')
             : '이력 없음';
-          return `<tr><td>${player.playerId}</td><td>${player.name}</td><td>${player.birthDate}</td><td>${history}</td></tr>`;
+          return `<tr><td>${player.playerId}</td><td>${player.name}</td><td>${player.birthDate || '미입력'}</td><td>${history}</td></tr>`;
         })
         .join('');
     } catch (error) {

@@ -11,44 +11,67 @@
 
 ## 1. `POST /api/player` — 참가자 등록
 
+`birthDate`는 **선택사항**이다 (2026-09-22 변경). 생략하거나 `null`로 보내면 이후 `/api/fortune`에서 AI를 호출하지 않고 버프 없이 참여하게 된다.
+
 **Request**
 ```json
 { "name": "홍길동", "birthDate": "1995-04-12" }
+```
+```json
+{ "name": "김유나" }
 ```
 
 **Response 201**
 ```json
 { "playerId": 1, "name": "홍길동", "birthDate": "1995-04-12" }
 ```
+```json
+{ "playerId": 2, "name": "김유나", "birthDate": null }
+```
 
-**에러**: `name` 또는 `birthDate` 누락/형식 오류 시 `400`.
+**에러**: `name` 누락 시 `400`.
 
 ---
 
 ## 2. `POST /api/fortune` — 오늘의 운세 + 버프 조회
 
-`FortuneService`(Mock 생성기)가 만든 점수를 그대로 사용한다 (과거 이력과 블렌딩하지 않음). 호출 결과는 `FortuneResultEntity`로 저장되어 관리자 화면에서 이력 조회에는 쓰이지만, 점수 계산 자체에는 영향을 주지 않는다. 게임 방식이 "결승선 통과 순서 경쟁"이라 버프는 **시작 높이(startY)** 한 가지뿐이다 — HP나 충돌 데미지 같은 개념 자체가 없다.
+`FortuneService`는 이제 `MockFortuneGenerator`가 아니라 **Claude API(Haiku 4.5)** 를 호출하는 `ClaudeFortuneGenerator`가 구현한다 (2026-09-22 변경, `04_pinball-map-design.md`/`devhelp/13` 참고). 게임 방식이 "결승선 통과 순서 경쟁"이라 버프는 **시작 높이(startY)** 한 가지뿐이다 — HP나 충돌 데미지 같은 개념 자체가 없다.
+
+동작은 참가자의 `birthDate` 유무에 따라 갈린다:
+
+- **`birthDate`가 없으면**: AI를 호출하지 않는다. `fortuneScore`/`luckyNumber`/`fortuneMessage`는 모두 `null`, 버프는 없음(`{tier:0, startY:0}`), `source`는 `"NONE"`.
+- **`birthDate`가 있으면**: 이름+생년월일이 과거에 조회된 적 있으면(=같은 사주) DB에 저장된 값을 재사용(`source: "CACHE"`, AI 호출 없음, 무료). 처음 조회하는 조합이면 Claude를 호출해서 새로 생성(`source: "AI"`)하고 그 결과를 DB에 저장해 다음부터는 캐시로 재사용한다. **이 캐시는 날짜와 무관하게 영구적이다** — 같은 이름+생년월일이면 다음 날에도 캐시를 그대로 쓴다.
 
 **Request**
 ```json
 { "playerId": 1 }
 ```
 
-**Response 200**
+**Response 200 (생년월일 있음, 최초 조회 → AI 호출)**
 ```json
 {
   "playerId": 1,
   "fortuneScore": 35,
   "luckyNumber": 7,
   "fortuneMessage": "오늘은 작은 행운이 따라옵니다",
-  "buff": {
-    "tier": 3,
-    "startY": 45
-  }
+  "buff": { "tier": 3, "startY": 45 },
+  "source": "AI"
 }
 ```
 
-**에러**: 존재하지 않는 `playerId` → `404`.
+**Response 200 (생년월일 없음)**
+```json
+{
+  "playerId": 2,
+  "fortuneScore": null,
+  "luckyNumber": null,
+  "fortuneMessage": null,
+  "buff": { "tier": 0, "startY": 0 },
+  "source": "NONE"
+}
+```
+
+**에러**: 존재하지 않는 `playerId` → `404`. Claude API 호출 실패(키 미설정 등) → `502` + `{"error": "..."}`.
 
 ---
 

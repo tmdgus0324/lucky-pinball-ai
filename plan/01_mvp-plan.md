@@ -14,15 +14,17 @@
 
 | 포함 | 미룸 (Phase 2) |
 |---|---|
-| H2 파일 기반 DB (참가자 + 운세 이력, **조회/기록용**) | MySQL, Redis 캐시 |
-| Mock 운세 생성기 (규칙 기반) | 실제 OpenAI 연동 |
+| H2 파일 기반 DB (참가자 + 운세 이력, **조회 + AI 호출 캐시 겸용**) | MySQL 전환 |
+| **실제 Claude API 연동** (Haiku 4.5, 구조화된 출력) | — (완료됨, 2026-09-22 3차 변경 참고) |
 | 관리자 화면 골격(조회 + 오류 로그) | 관리자 인증, 로그 영속화, 가중치 수동 조정 실기능 |
 | 실제 핀볼 맵(갈톤보드 1종) + 낙하 애니메이션 | 맵 여러 종 추가, 맵 선택 UI |
-| 로컬 동작 + 독립 git 저장소 준비 | 실제 GitHub Pages/Render 배포 |
+| 로컬 동작 + 독립 git 저장소 준비 + GitHub 푸시 | 실제 GitHub Pages/Render 배포 |
 
 > **변경 이력(2026-09-22, 1차)**: 처음엔 재방문자의 과거 평균 점수를 오늘 점수와 가중평균하는 기능을 넣기로 했었으나, 버프 체계를 단순화하면서 **가중치 블렌딩 로직은 제거**했다. 이제 `POST /api/fortune`은 매번 새로 생성한 mock 점수를 그대로 사용한다. 다만 참가자 이력은 계속 H2에 기록해서 관리자 화면(`GET /api/admin/players`)에서 과거 기록을 조회할 수 있게는 유지한다 — 단지 점수 계산에 더는 쓰이지 않을 뿐이다.
 >
 > **변경 이력(2026-09-22, 2차)**: 사용자가 참고한 [lazygyu의 "Marble Roulette"](https://lazygyu.github.io/roulette/)(구슬들이 물리엔진으로 결승선까지 경쟁하는 추첨 도구)을 반영해, **승부 방식을 "HP 생존"에서 "결승선 통과 순서 경쟁"으로 전환**했다. 더 이상 HP·충돌 데미지 개념이 없다 — 모든 참가자의 구슬이 핀볼 맵을 통과해 결승선에 도달하며, 도착 순서로 순위가 매겨지고 **가장 마지막에 도착한 참가자가 "당첨자"**가 된다. 버프(시작 높이)는 그대로 유지하되, 그 의미가 "생존에 유리"에서 "결승선에 가깝게 출발해 먼저 도착 → 당첨에서 멀어짐"으로 바뀌었다.
+>
+> **변경 이력(2026-09-22, 3차)**: `MockFortuneGenerator`를 실제 **Claude API(Haiku 4.5)** 호출로 교체했다(`ClaudeFortuneGenerator`, `devhelp/13` 참고) — 기획서 원안의 "OpenAI"가 아니라 Claude로 결정. 동시에 생년월일을 **선택사항**으로 바꿔서, 입력하지 않으면 AI를 호출하지 않고 버프 없이 참여할 수 있게 했다. 생년월일을 입력한 경우에도 이름+생년월일이 같으면(=같은 사주) DB에 저장된 과거 결과를 영구적으로 재사용해서, 동일 인물에 대해 Claude는 딱 한 번만 호출된다.
 
 ## 2. 폴더 구조
 
@@ -64,12 +66,10 @@ public interface FortuneService {
     FortuneResult analyze(String name, LocalDate birthDate);
 }
 ```
-`MockFortuneGenerator`가 지금 이 인터페이스를 구현한다: `name + birthDate + 오늘 날짜`를 시드로 `Random`을 만들어 `fortuneScore(0~100)`, `luckyNumber`, `fortuneMessage`(canned 메시지 풀에서 선택)를 생성 — **같은 사람이 같은 날 다시 조회하면 같은 결과**가 나오도록 결정적으로 설계한다 (기획서의 캐시 키 개념과 동일한 성질). 나중에 `OpenAiFortuneGenerator`가 같은 인터페이스를 구현해서 교체 가능.
+애초 `MockFortuneGenerator`(규칙 기반 `Random`)로 시작했지만, **2026-09-22부로 `ClaudeFortuneGenerator`(Claude API, Haiku 4.5, 구조화된 출력)로 교체됐다** — 인터페이스만 지키면 됐기 때문에 호출부 코드는 전혀 바꾸지 않았다. `MockFortuneGenerator`는 `@Service`를 떼고 클래스만 남겨서 단위 테스트용으로만 쓴다. 자세한 내용은 [`devhelp/13_Claude_API_실제_운세_연동.md`](../devhelp/13_Claude_API_실제_운세_연동.md) 참고.
 
-### 3.2 참가자 이력 저장 (가중치 없음 — 2026-09-22 단순화)
-`FortuneService`(Mock 생성기)가 만든 점수를 **그대로** 최종 점수로 사용한다. 과거 이력과 blending하는 로직은 만들지 않는다 — 애초 "AI 토큰 절약" 목적이었지만, 버프 체계를 단순화하면서 함께 걷어냈다.
-
-다만 `POST /api/fortune` 호출 결과는 여전히 `FortuneResultEntity`로 H2에 한 행씩 저장한다. 용도는 오직 **관리자 화면에서 참가자별 과거 기록을 조회**하는 것뿐이며, 이후 게임 로직/점수 계산에는 전혀 사용하지 않는다. (`FortuneService` 인터페이스는 원래 계획대로 Mock ↔ OpenAI 교체 지점으로만 남는다.)
+### 3.2 참가자 이력 저장 + AI 호출 캐시 (2026-09-22 갱신)
+생년월일은 **선택사항**이다. 없으면 `FortuneService`를 아예 호출하지 않고 버프 없이($`tier:0, startY:0`$) 즉시 응답한다(비용 0). 있으면 `FortuneResultEntity`에서 **이름+생년월일이 같은 과거 기록**(=같은 사주)을 먼저 찾아보고, 있으면 그 값을 재사용(`source: "CACHE"`)하고, 없을 때만 Claude를 호출(`source: "AI"`)한다 — 이 캐시는 하루 단위가 아니라 **영구적**이다. 어느 경로든 결과는 `FortuneResultEntity`에 한 행씩 저장돼 관리자 화면에서 참가자별 과거 기록으로 보인다.
 
 ### 3.3 `BuffCalculator` — 점수 → 버프 변환 (시작 높이만 차등, HP/데미지 없음)
 버프 종류가 복잡하다는 피드백 + 승부 방식이 결승선 경쟁으로 바뀌면서, 버프는 **시작 Y(높이) 한 가지만** 남는다. HP·충돌 데미지 개념 자체가 없다 — 구슬은 물리적으로 부딪히고 튕기지만, 그로 인해 약해지거나 탈락하지 않는다. 오직 "결승선에 얼마나 가까운 곳에서 출발하는가"만 결과에 영향을 준다.
@@ -101,8 +101,7 @@ public interface FortuneService {
 물리 시뮬레이션(Matter.js)은 브라우저에서 돌아가므로, 백엔드는 결과를 스스로 알 수 없다. 그래서 기획서에 없던 `POST /api/game/result`를 추가해, 클라이언트가 모든 참가자가 결승선을 통과한 뒤 **완주 순서 전체(`finishOrder`)**를 서버에 보고하도록 한다. 백엔드는 이 목록의 마지막 참가자를 "당첨자"로 기록한다. `GET /api/game/result/{gameId}`는 기획서대로 조회 전용으로 유지하되, 전체 순위와 당첨자를 함께 반환한다 (`02_api-spec.md` §5, §6 참고). 이 방식의 한계(클라이언트가 조작된 결과를 보고할 수 있음)는 포트폴리오 MVP에서는 허용 가능한 수준으로 명시해둔다.
 
 ## 4. Phase 2 (이번 범위 밖)
-- 실제 OpenAI 연동 (`OpenAiFortuneGenerator`)
-- Redis 캐시 (동일인 동일자 재조회 시 OpenAI 재호출 방지)
+- ~~실제 AI 연동~~ — **완료** (Claude API, `devhelp/13` 참고)
 - 가중치 수동 조정 실기능
 - 관리자 인증, 오류 로그 영속화
 - 실제 GitHub Pages(프론트) + Render/Railway(백엔드) 배포

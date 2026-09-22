@@ -2,7 +2,6 @@ package com.luckypinball.player;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import java.time.LocalDate;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -28,7 +27,7 @@ public class PlayerController {
 
     public record RegisterPlayerRequest(
             @NotBlank String name,
-            @NotNull LocalDate birthDate
+            LocalDate birthDate // 선택사항 — 없으면 버프 없이 참여(AI 호출 안 함)
     ) {
     }
 

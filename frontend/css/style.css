@@ -254,12 +254,20 @@ button:disabled {
 
 .pinball-board {
   position: relative;
-  flex: 2 1 380px;
-  height: 560px;
+  flex: 0 0 auto;
+  max-width: 100%;
   background: linear-gradient(180deg, #1a1730, #0f0d1a);
   border: 2px solid var(--border);
   border-radius: 10px;
   overflow: hidden;
+}
+
+.pinball-scene {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform-origin: 0 0;
+  transition: transform 0.25s ease-out;
 }
 
 .zone-label {

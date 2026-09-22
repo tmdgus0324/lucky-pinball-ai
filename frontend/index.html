@@ -22,11 +22,11 @@
   <!-- 1. 참가자 등록 -->
   <section class="panel">
     <h2>1. 참가자 등록 <span class="badge">최대 8명</span></h2>
-    <p class="desc">이름(또는 별칭)과 생년월일을 입력해 참가자를 등록합니다.</p>
+    <p class="desc">이름(또는 별칭)을 입력해 참가자를 등록합니다. 생년월일은 <strong>선택사항</strong>이며 <strong>6자리 숫자</strong>로 입력합니다(예: <code>880324</code> → 1988-03-24, <code>130101</code> → 2013-01-01). 입력하면 AI가 오늘의 운세를 분석해 버프를 부여하고, 비워두면 AI 호출 없이 버프 없는 상태로 바로 참여합니다.</p>
 
     <form id="regForm" class="reg-form">
       <input type="text" name="name" placeholder="이름 / 별칭" autocomplete="off" required>
-      <input type="date" name="birthDate" required>
+      <input type="text" name="birthDate" placeholder="생년월일 6자리 (선택, 예: 880324)" inputmode="numeric" maxlength="6">
       <button type="submit">참가자 등록</button>
     </form>
 

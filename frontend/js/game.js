@@ -12,14 +12,20 @@ const CLASSIC_GALTON_MAP = {
   id: 'classic-galton',
   name: '클래식 갈톤보드',
   boardWidth: 560,
-  boardHeight: 640,
-  pegField: { rows: 8, colSpacing: 60, rowSpacing: 50, startY: 90, pegRadius: 7 },
-  finishLineY: 470,
+  boardHeight: 770,
+  pegField: { rows: 12, colSpacing: 60, rowSpacing: 50, startY: 90, pegRadius: 7 }, // 8행 -> 12행으로 확장
+  finishLineY: 670,
   funnelBottomMargin: 50, // 하단에서 좌우로 좁아지는 폭(한쪽 기준)
   ballRadius: 13,
-  gravityScale: 1.2,
+  gravityScale: 0.8, // 기존(1.2) 대비 1.5배 느리게
   restitution: 0.45,
 };
+
+// "역전 연출": 결승선을 통과하지 못한 공이 이 인원 이하로 줄어들면, 그중 가장 뒤처진(=꼴찌 후보)
+// 공을 따라 카메라를 확대한다. 처음부터(8명 전원) 추적하면 초반 혼전에서 카메라가 계속
+// 흔들리기만 해서 오히려 산만해지므로, 순위가 어느 정도 추려진 막판에만 켠다.
+const ZOOM_TRIGGER_REMAINING = 3;
+const ZOOM_SCALE = 1.3;
 
 /** Matter.js를 감싸는 얇은 어댑터. 이 파일 밖에서는 Matter.* 를 직접 쓰지 않는다. */
 class MatterAdapter {
@@ -116,9 +122,16 @@ function buildPegPositions(cfg) {
 }
 
 function spawnX(index, total, cfg) {
+  // 양 끝(벽 바로 옆)에서 출발하면 못 하나 건드리지 않고 벽을 따라 있는 빈 통로로
+  // 바로 낙하해버려 재미가 없다 — 그래서 출발 위치를 "못 배열이 실제로 있는 범위"
+  // 안쪽으로 한정하고, 정확히 같은 자리에서 매번 출발하지 않도록 약간의 랜덤 오차를 준다.
   const { left, right } = playableBoundsAtY(20, cfg);
-  const usable = right - left;
-  return left + (usable * (index + 0.5)) / total;
+  const fieldLeft = left + PEG_WALL_CLEARANCE;
+  const fieldRight = right - PEG_WALL_CLEARANCE;
+  const usable = fieldRight - fieldLeft;
+  const base = fieldLeft + (usable * (index + 0.5)) / total;
+  const jitter = (Math.random() - 0.5) * (usable / total) * 0.5;
+  return base + jitter;
 }
 
 function spawnY(buffStartY) {
@@ -126,32 +139,58 @@ function spawnY(buffStartY) {
   return 12 + buffStartY * 0.6;
 }
 
-function renderStaticElements(boardEl, cfg) {
+/**
+ * 카메라(확대/이동) 연출을 위해 보드를 두 겹으로 나눈다:
+ * boardEl(뷰포트, 크기 고정·overflow:hidden) 안에 sceneEl(실제 못/벽/공이 그려지는 레이어)을
+ * 두고, sceneEl에만 scale/translate 변형을 걸어 "카메라"처럼 보이게 한다.
+ */
+function createScene(boardEl, cfg) {
   boardEl.innerHTML = '';
+  boardEl.style.width = cfg.boardWidth + 'px';
+  boardEl.style.height = cfg.boardHeight + 'px';
 
+  const sceneEl = document.createElement('div');
+  sceneEl.className = 'pinball-scene';
+  sceneEl.style.width = cfg.boardWidth + 'px';
+  sceneEl.style.height = cfg.boardHeight + 'px';
+  boardEl.appendChild(sceneEl);
+  return sceneEl;
+}
+
+/**
+ * sceneEl을 (targetX, targetY)가 뷰포트 중앙에 오도록 scale배 확대한다.
+ * scale=1, target=중앙이면 원래 상태(변형 없음)와 같다.
+ */
+function applyCamera(sceneEl, cfg, targetX, targetY, scale) {
+  const dx = cfg.boardWidth / 2 - targetX * scale;
+  const dy = cfg.boardHeight / 2 - targetY * scale;
+  sceneEl.style.transform = `translate(${dx}px, ${dy}px) scale(${scale})`;
+}
+
+function renderStaticElements(sceneEl, cfg) {
   const dropLabel = document.createElement('div');
   dropLabel.className = 'zone-label';
   dropLabel.textContent = '낙하 시작 구역';
-  boardEl.appendChild(dropLabel);
+  sceneEl.appendChild(dropLabel);
 
   const finishLine = document.createElement('div');
   finishLine.className = 'finish-line';
   finishLine.style.top = cfg.finishLineY + 'px';
   finishLine.innerHTML = '<span class="label">결승선</span>';
-  boardEl.appendChild(finishLine);
+  sceneEl.appendChild(finishLine);
 }
 
-function renderPegs(boardEl, cfg) {
+function renderPegs(sceneEl, cfg) {
   buildPegPositions(cfg).forEach((pos) => {
     const el = document.createElement('div');
     el.className = 'peg';
     el.style.left = pos.x + 'px';
     el.style.top = pos.y + 'px';
-    boardEl.appendChild(el);
+    sceneEl.appendChild(el);
   });
 }
 
-function renderWallVisual(boardEl, x1, y1, x2, y2, thickness) {
+function renderWallVisual(sceneEl, x1, y1, x2, y2, thickness) {
   const dx = x2 - x1;
   const dy = y2 - y1;
   const length = Math.sqrt(dx * dx + dy * dy);
@@ -164,12 +203,12 @@ function renderWallVisual(boardEl, x1, y1, x2, y2, thickness) {
   el.style.left = x1 + 'px';
   el.style.top = y1 - thickness / 2 + 'px';
   el.style.transform = `rotate(${angle}rad)`;
-  boardEl.appendChild(el);
+  sceneEl.appendChild(el);
 }
 
-function buildBoard(adapter, boardEl, cfg) {
-  renderStaticElements(boardEl, cfg);
-  renderPegs(boardEl, cfg);
+function buildBoard(adapter, sceneEl, cfg) {
+  renderStaticElements(sceneEl, cfg);
+  renderPegs(sceneEl, cfg);
 
   buildPegPositions(cfg).forEach((pos) => {
     adapter.addStaticCircle(pos.x, pos.y, cfg.pegField.pegRadius, 0.5);
@@ -185,24 +224,24 @@ function buildBoard(adapter, boardEl, cfg) {
   const leftLen = Math.hypot(rightMargin, bottom);
   const leftAngle = Math.atan2(bottom, rightMargin);
   adapter.addStaticRect(rightMargin / 2, bottom / 2, leftLen, wallThickness, leftAngle);
-  renderWallVisual(boardEl, 0, 0, rightMargin, bottom, wallThickness);
+  renderWallVisual(sceneEl, 0, 0, rightMargin, bottom, wallThickness);
 
   const rightLen = Math.hypot(rightMargin, bottom);
   const rightAngle = Math.atan2(bottom, -rightMargin);
   adapter.addStaticRect(cfg.boardWidth - rightMargin / 2, bottom / 2, rightLen, wallThickness, rightAngle);
-  renderWallVisual(boardEl, cfg.boardWidth, 0, cfg.boardWidth - rightMargin, bottom, wallThickness);
+  renderWallVisual(sceneEl, cfg.boardWidth, 0, cfg.boardWidth - rightMargin, bottom, wallThickness);
 
   // 바닥: 완주 후 구슬이 자연스럽게 멈춰 쌓이는 용도.
   adapter.addStaticRect(cfg.boardWidth / 2, bottom + 8, cfg.boardWidth, 16, 0);
 }
 
-function createBallEl(boardEl, name, colorIndex) {
+function createBallEl(sceneEl, name, colorIndex) {
   const palette = ['#6b7280', '#4ade80', '#38bdf8', '#a78bfa', '#ffd166', '#f472b6', '#fb923c', '#22d3ee'];
   const el = document.createElement('div');
   el.className = 'ball';
   el.style.background = palette[colorIndex % palette.length];
   el.textContent = name;
-  boardEl.appendChild(el);
+  sceneEl.appendChild(el);
   return el;
 }
 
@@ -243,7 +282,8 @@ async function runPinballGame({ boardEl, rankListEl, participants, onComplete })
   await adapter.init();
   adapter.setGravity(cfg.gravityScale);
 
-  buildBoard(adapter, boardEl, cfg);
+  const sceneEl = createScene(boardEl, cfg);
+  buildBoard(adapter, sceneEl, cfg);
 
   const ballStates = [];
   const pendingNames = new Set();
@@ -252,7 +292,7 @@ async function runPinballGame({ boardEl, rankListEl, participants, onComplete })
     const x = spawnX(index, participants.length, cfg);
     const y = spawnY(participant.buff.startY);
     const body = adapter.addBall(x, y, cfg.ballRadius, cfg.restitution);
-    const el = createBallEl(boardEl, participant.name, index);
+    const el = createBallEl(sceneEl, participant.name, index);
     ballStates.push({
       playerId: participant.playerId,
       name: participant.name,
@@ -267,9 +307,11 @@ async function runPinballGame({ boardEl, rankListEl, participants, onComplete })
   const finishOrder = [];
   const finishedEntries = [];
   renderRankPanel(rankListEl, finishedEntries, pendingNames);
+  applyCamera(sceneEl, cfg, cfg.boardWidth / 2, cfg.boardHeight / 2, 1);
 
   adapter.run(() => {
     let allFinished = true;
+    const unfinished = [];
 
     for (const state of ballStates) {
       const pos = adapter.getPosition(state.body);
@@ -286,6 +328,7 @@ async function runPinballGame({ boardEl, rankListEl, participants, onComplete })
           renderRankPanel(rankListEl, finishedEntries, pendingNames);
         } else {
           allFinished = false;
+          unfinished.push({ state, pos });
 
           // 못/벽 사이의 기하학적 틈에 구슬이 물리적으로 끼어 멈춰버리는 경우가 실제로
           // 관찰되어(공이 결승선에 영영 도달하지 못함) 안전장치로 넣은 로직 —
@@ -301,6 +344,17 @@ async function runPinballGame({ boardEl, rankListEl, participants, onComplete })
           }
         }
       }
+    }
+
+    // "역전 연출": 결승선을 통과 못 한 공이 ZOOM_TRIGGER_REMAINING명 이하로 줄어들면,
+    // 그중 가장 못 내려간(y가 가장 작은 = 현재 꼴찌 후보) 공을 계속 따라가며 확대한다.
+    // 꼴찌 후보가 바뀔 때마다(=역전) 카메라가 새 대상 쪽으로 부드럽게 넘어간다
+    // (CSS transition으로 처리 — 매 프레임 목표 좌표만 갱신하면 됨, style.css 참고).
+    if (!allFinished && unfinished.length <= ZOOM_TRIGGER_REMAINING) {
+      const trailing = unfinished.reduce((a, b) => (a.pos.y <= b.pos.y ? a : b));
+      applyCamera(sceneEl, cfg, trailing.pos.x, trailing.pos.y, ZOOM_SCALE);
+    } else if (!allFinished) {
+      applyCamera(sceneEl, cfg, cfg.boardWidth / 2, cfg.boardHeight / 2, 1);
     }
 
     if (allFinished) {

@@ -8,10 +8,8 @@ MVP에서는 **H2 파일 기반 DB** 하나만 사용한다 (`backend/data/lucky
 |---|---|---|
 | `id` | BIGINT, PK, auto increment | |
 | `name` | VARCHAR(100), NOT NULL | 이름 또는 별칭 |
-| `birth_date` | DATE, NOT NULL | 생년월일 |
+| `birth_date` | DATE, **NULL 허용** | 생년월일 — 2026-09-22부터 선택사항. NULL이면 AI 호출 없이 버프 없는 상태로 참여 |
 | `created_at` | TIMESTAMP, NOT NULL | 최초 등록 시각 |
-
-기획서의 `PLAYER` 테이블과 동일한 구조.
 
 ## 2. `FORTUNE_RESULT`
 
@@ -19,15 +17,19 @@ MVP에서는 **H2 파일 기반 DB** 하나만 사용한다 (`backend/data/lucky
 |---|---|---|
 | `id` | BIGINT, PK, auto increment | |
 | `player_id` | BIGINT, FK → `PLAYER.id`, NOT NULL | |
-| `fortune_score` | INT, NOT NULL (0~100) | Mock 생성기가 만든 **원시 점수 그대로** (블렌딩 없음) |
+| `name` | VARCHAR(100), NOT NULL | 조회 당시 참가자 이름 (비정규화, 아래 캐시 조회용) |
+| `birth_date` | DATE, NOT NULL | 조회 당시 생년월일 (비정규화, 아래 캐시 조회용) — 이 테이블에 저장되는 행은 항상 생년월일이 있는 경우만이다 |
+| `fortune_score` | INT, NOT NULL (0~100) | Claude가 생성한 점수 (또는 캐시 재사용 시 과거 값 그대로) |
 | `fortune_message` | VARCHAR(255) | |
 | `lucky_number` | INT | |
-| `created_date` | DATE, NOT NULL | 조회한 날짜 (하루 1건이 일반적이나, 여러 게임에 참여하면 여러 건 가능) |
+| `created_date` | DATE, NOT NULL | 조회한 날짜 |
+| `source` | VARCHAR(10) | `"AI"`(이번에 Claude를 실제로 호출함) 또는 `"CACHE"`(과거 기록 재사용) |
 
-참가자가 `POST /api/fortune`을 호출할 때마다 한 행이 새로 쌓인다. 기획서의 `FORTUNE_RESULT` 테이블과 동일한 컬럼 구성이다.
+참가자가 `POST /api/fortune`을 호출할 때마다(생년월일이 있는 경우에 한해) 한 행이 새로 쌓인다.
 
-### 이 테이블의 용도 (2026-09-22 단순화)
-과거에는 이 이력을 오늘 점수와 가중평균하는 데 썼지만, 버프 체계를 단순화하면서 그 로직은 제거했다. 지금은 **`GET /api/admin/players`에서 참가자별 과거 기록을 보여주는 용도로만** 저장한다 — 오늘의 점수/버프 계산에는 전혀 영향을 주지 않는 순수 기록용 데이터다.
+### 이 테이블의 용도 (2026-09-22, Claude 연동과 함께 갱신)
+- **관리자 화면**(`GET /api/admin/players`)에서 참가자별 과거 기록을 보여주는 용도.
+- **AI 호출 캐시**: `name` + `birth_date`가 일치하는 과거 행이 있으면(=같은 사주), Claude를 다시 호출하지 않고 그 점수/메시지를 재사용한다 (`FortuneQueryService` 참고). `player_id`가 아니라 `name`+`birth_date`로 조회하는 이유는, 서로 다른 등록 건(다른 player_id)이라도 이름+생년월일이 같으면 같은 사람으로 보고 캐시를 공유해야 하기 때문 — 그래서 이 두 컬럼을 비정규화해서 함께 저장해둔다. 이 캐시는 날짜 제한 없이 영구적이다(하루 단위 캐시가 아님).
 
 ## 3. (참고) DB 테이블이 아닌 것들
 
@@ -35,5 +37,5 @@ MVP에서는 **H2 파일 기반 DB** 하나만 사용한다 (`backend/data/lucky
 
 ## 4. 향후 확장 (Phase 2, 지금 설계 안 함)
 - `GAME_RESULT` 테이블 추가.
-- Redis: `name+birthDate+date`를 키로 하는 캐시 레이어 (OpenAI 실연동 시 비용 절감용).
 - H2 → MySQL 전환 (Spring Data JPA 인터페이스는 그대로 유지, `application.yml` datasource 설정만 교체).
+- (참고) 애초 계획했던 "Redis + 하루 단위 캐시"는 실제로는 `FORTUNE_RESULT` 테이블 기반의 **영구 캐시**로 대체 구현됐다 (`devhelp/13` 참고) — 하루 단위 갱신이 필요해지면 그때 `created_date` 기준으로 조회 조건을 좁히면 된다.
