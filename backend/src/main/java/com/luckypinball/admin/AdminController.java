@@ -44,7 +44,8 @@ public class AdminController {
 
     @GetMapping("/api/admin/players")
     public List<PlayerAdminView> players() {
-        return playerJpaRepository.findAll().stream()
+        // 가장 최근에 등록한 참가자가 먼저 보이도록 정렬 (관리자가 방금 등록한 참가자를 바로 확인할 수 있게)
+        return playerJpaRepository.findAllByOrderByCreatedAtDesc().stream()
                 .map(this::toPlayerAdminView)
                 .toList();
     }

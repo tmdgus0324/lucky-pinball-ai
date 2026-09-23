@@ -1,25 +1,49 @@
 /**
  * 핀볼 맵(클래식 갈톤보드) 렌더링 + 물리 시뮬레이션.
- * 설계 근거: plan/04_pinball-map-design.md
+ * frontend/js/game.js를 거의 그대로 옮긴 것 — React는 여기에 DOM 요소만 넘겨주는 얇은
+ * 경계 역할만 한다 (devhelp/21 참고). 설계 근거: plan/04_pinball-map-design.md
  *
  * 물리엔진(Matter.js) 관련 코드는 전부 MatterAdapter 안에 가둬뒀다.
  * 나중에 Box2D 등으로 교체하고 싶어지면, 이 어댑터와 같은 메서드를
  * 제공하는 새 어댑터를 만들어 끼워 넣기만 하면 된다 (게임 로직은
  * getPosition()으로 위치만 물어보기 때문에 엔진에 종속되지 않는다).
  */
+import * as Matter from 'matter-js';
+import type { GameParticipant } from '../api/client';
+
+interface MapConfig {
+  id: string;
+  name: string;
+  boardWidth: number;
+  boardHeight: number;
+  pegField: { rows: number; colSpacing: number; rowSpacing: number; startY: number; pegRadius: number };
+  finishLineY: number;
+  funnelBottomMargin: number;
+  ballRadius: number;
+  gravityScale: number;
+  restitution: number;
+  /** 이 못 행(row index)은 못 대신 회전 핀휠 장애물로 대체한다. */
+  pinwheelRowIndex: number;
+  pinwheelBarLength: number;
+  pinwheelBarThickness: number;
+  /** 라디안/틱. 인접한 핀휠끼리는 부호를 번갈아 반대로 돈다(lazygyu/roulette 참고). */
+  pinwheelAngularSpeed: number;
+  /** 카메라가 선두 공 추적을 시작하는 y좌표 — 낙하 초반 혼전 구간은 제외한다. */
+  zoomStartY: number;
+}
 
 // 맵을 기존(770px, 12행) 대비 약 2배로 키우고, 중간에 핀휠 행을 하나 끼워 넣었다.
 // 참고: lazygyu/roulette(https://lazygyu.github.io/roulette/)의 "Wheel of fortune" 맵이
 // 핀 배열 중간에 회전 막대(핀휠)를 가로로 나란히 배치하는 구조를 이 프로젝트 방식(못 배열
 // 기반)에 맞게 응용했다.
-const CLASSIC_GALTON_MAP = {
+const CLASSIC_GALTON_MAP: MapConfig = {
   id: 'classic-galton',
   name: '클래식 갈톤보드',
   boardWidth: 560,
   boardHeight: 1500,
   pegField: { rows: 20, colSpacing: 60, rowSpacing: 50, startY: 280, pegRadius: 7 },
   finishLineY: 1400,
-  funnelBottomMargin: 50, // 하단에서 좌우로 좁아지는 폭(한쪽 기준)
+  funnelBottomMargin: 50,
   ballRadius: 13,
   gravityScale: 0.4, // 기존(0.8) 대비 2배 느리게
   restitution: 0.45,
@@ -36,106 +60,6 @@ const CLASSIC_GALTON_MAP = {
 // 낙하 초반(zoomStartY 이전)에는 8개 공이 한꺼번에 엎치락뒤치락해 카메라가 계속 흔들리므로
 // 그 구간은 확대하지 않고 넓은 시야를 유지한다(devhelp/12에서 겪은 문제의 재발 방지).
 const ZOOM_SCALE = 1.3;
-
-/** Matter.js를 감싸는 얇은 어댑터. 이 파일 밖에서는 Matter.* 를 직접 쓰지 않는다. */
-class MatterAdapter {
-  constructor() {
-    this.kinematics = [];
-  }
-
-  async init() {
-    this.engine = Matter.Engine.create();
-    this.world = this.engine.world;
-    return this;
-  }
-
-  setGravity(scale) {
-    this.world.gravity.y = scale;
-  }
-
-  addStaticRect(cx, cy, width, height, angle = 0, restitution = 0) {
-    const body = Matter.Bodies.rectangle(cx, cy, width, height, { isStatic: true, angle, restitution, friction: 0 });
-    Matter.World.add(this.world, body);
-    return body;
-  }
-
-  addStaticCircle(cx, cy, radius, restitution = 0.5) {
-    const body = Matter.Bodies.circle(cx, cy, radius, { isStatic: true, restitution, friction: 0 });
-    Matter.World.add(this.world, body);
-    return body;
-  }
-
-  addBall(x, y, radius, restitution) {
-    const body = Matter.Bodies.circle(x, y, radius, {
-      restitution,
-      friction: 0,
-      frictionAir: 0.001,
-    });
-    Matter.World.add(this.world, body);
-    return body;
-  }
-
-  /**
-   * 제자리에서 계속 회전하는 장애물(핀휠). Box2D의 kinematic 바디에 해당 —
-   * 물리적으로는 static이라 공에 부딪혀도 밀리지 않지만, 매 틱 각도를 직접 갱신해서
-   * 계속 돌아가게 만든다(lazygyu/roulette의 회전 막대 장애물과 같은 방식).
-   */
-  addKinematicRect(cx, cy, width, height, angularSpeed) {
-    const body = Matter.Bodies.rectangle(cx, cy, width, height, { isStatic: true, restitution: 0.3, friction: 0 });
-    Matter.World.add(this.world, body);
-    this.kinematics.push({ body, angularSpeed });
-    return body;
-  }
-
-  getPosition(body) {
-    return { x: body.position.x, y: body.position.y };
-  }
-
-  getAngle(body) {
-    return body.angle;
-  }
-
-  getSpeed(body) {
-    return body.speed;
-  }
-
-  nudge(body) {
-    const horizontalKick = (Math.random() - 0.5) * 6;
-    Matter.Body.setVelocity(body, {
-      x: body.velocity.x + horizontalKick,
-      y: Math.max(body.velocity.y, 2),
-    });
-  }
-
-  run(onTick) {
-    this.runner = Matter.Runner.create();
-    Matter.Runner.run(this.runner, this.engine);
-    this._tickHandler = () => {
-      for (const k of this.kinematics) {
-        Matter.Body.setAngle(k.body, k.body.angle + k.angularSpeed);
-      }
-      onTick();
-    };
-    Matter.Events.on(this.engine, 'afterUpdate', this._tickHandler);
-  }
-
-  stop() {
-    if (this.runner) Matter.Runner.stop(this.runner);
-    if (this._tickHandler) Matter.Events.off(this.engine, 'afterUpdate', this._tickHandler);
-  }
-
-  dispose() {
-    this.stop();
-    Matter.World.clear(this.world, false);
-    Matter.Engine.clear(this.engine);
-  }
-}
-
-function playableBoundsAtY(y, cfg) {
-  const t = Math.min(1, Math.max(0, y / cfg.boardHeight));
-  const margin = cfg.funnelBottomMargin * t;
-  return { left: margin, right: cfg.boardWidth - margin };
-}
 
 // 못을 벽에 너무 가깝게 두면, 벽과 못 사이의 좁은 틈에 공이 반복적으로 끼었다 빠지기를
 // 되풀이하며 "덜컹거리며 내려오는" 부자연스러운 움직임이 생긴다(실제 테스트로 확인됨,
@@ -155,9 +79,111 @@ const PEG_WALL_CLEARANCE = 70;
 // 문제를 완화한다.
 const WALL_RESTITUTION = 0.7;
 
-function buildPegPositions(cfg) {
+/** Matter.js를 감싸는 얇은 어댑터. 이 파일 밖에서는 Matter.* 를 직접 쓰지 않는다. */
+class MatterAdapter {
+  private engine!: Matter.Engine;
+  private world!: Matter.World;
+  private runner?: Matter.Runner;
+  private tickHandler?: () => void;
+  private kinematics: { body: Matter.Body; angularSpeed: number }[] = [];
+
+  async init(): Promise<this> {
+    this.engine = Matter.Engine.create();
+    this.world = this.engine.world;
+    return this;
+  }
+
+  setGravity(scale: number) {
+    this.world.gravity.y = scale;
+  }
+
+  addStaticRect(cx: number, cy: number, width: number, height: number, angle = 0, restitution = 0): Matter.Body {
+    const body = Matter.Bodies.rectangle(cx, cy, width, height, { isStatic: true, angle, restitution, friction: 0 });
+    Matter.World.add(this.world, body);
+    return body;
+  }
+
+  addStaticCircle(cx: number, cy: number, radius: number, restitution = 0.5): Matter.Body {
+    const body = Matter.Bodies.circle(cx, cy, radius, { isStatic: true, restitution, friction: 0 });
+    Matter.World.add(this.world, body);
+    return body;
+  }
+
+  addBall(x: number, y: number, radius: number, restitution: number): Matter.Body {
+    const body = Matter.Bodies.circle(x, y, radius, {
+      restitution,
+      friction: 0,
+      frictionAir: 0.001,
+    });
+    Matter.World.add(this.world, body);
+    return body;
+  }
+
+  /**
+   * 제자리에서 계속 회전하는 장애물(핀휠). Box2D의 kinematic 바디에 해당 —
+   * 물리적으로는 static이라 공에 부딪혀도 밀리지 않지만, 매 틱 각도를 직접 갱신해서
+   * 계속 돌아가게 만든다(lazygyu/roulette의 회전 막대 장애물과 같은 방식).
+   */
+  addKinematicRect(cx: number, cy: number, width: number, height: number, angularSpeed: number): Matter.Body {
+    const body = Matter.Bodies.rectangle(cx, cy, width, height, { isStatic: true, restitution: 0.3, friction: 0 });
+    Matter.World.add(this.world, body);
+    this.kinematics.push({ body, angularSpeed });
+    return body;
+  }
+
+  getPosition(body: Matter.Body): { x: number; y: number } {
+    return { x: body.position.x, y: body.position.y };
+  }
+
+  getAngle(body: Matter.Body): number {
+    return body.angle;
+  }
+
+  getSpeed(body: Matter.Body): number {
+    return body.speed;
+  }
+
+  nudge(body: Matter.Body) {
+    const horizontalKick = (Math.random() - 0.5) * 6;
+    Matter.Body.setVelocity(body, {
+      x: body.velocity.x + horizontalKick,
+      y: Math.max(body.velocity.y, 2),
+    });
+  }
+
+  run(onTick: () => void) {
+    this.runner = Matter.Runner.create();
+    Matter.Runner.run(this.runner, this.engine);
+    this.tickHandler = () => {
+      for (const k of this.kinematics) {
+        Matter.Body.setAngle(k.body, k.body.angle + k.angularSpeed);
+      }
+      onTick();
+    };
+    Matter.Events.on(this.engine, 'afterUpdate', this.tickHandler);
+  }
+
+  stop() {
+    if (this.runner) Matter.Runner.stop(this.runner);
+    if (this.tickHandler) Matter.Events.off(this.engine, 'afterUpdate', this.tickHandler);
+  }
+
+  dispose() {
+    this.stop();
+    Matter.World.clear(this.world, false);
+    Matter.Engine.clear(this.engine);
+  }
+}
+
+function playableBoundsAtY(y: number, cfg: MapConfig) {
+  const t = Math.min(1, Math.max(0, y / cfg.boardHeight));
+  const margin = cfg.funnelBottomMargin * t;
+  return { left: margin, right: cfg.boardWidth - margin };
+}
+
+function buildPegPositions(cfg: MapConfig): { x: number; y: number }[] {
   const { rows, colSpacing, rowSpacing, startY } = cfg.pegField;
-  const pegs = [];
+  const pegs: { x: number; y: number }[] = [];
   for (let row = 0; row < rows; row++) {
     if (row === cfg.pinwheelRowIndex) continue; // 이 행은 못 대신 핀휠이 차지한다
     const y = startY + row * rowSpacing;
@@ -170,14 +196,20 @@ function buildPegPositions(cfg) {
   return pegs;
 }
 
-function buildPinwheelPositions(cfg) {
+interface PinwheelSpec {
+  x: number;
+  y: number;
+  angularSpeed: number;
+}
+
+function buildPinwheelPositions(cfg: MapConfig): PinwheelSpec[] {
   const y = cfg.pegField.startY + cfg.pinwheelRowIndex * cfg.pegField.rowSpacing;
   const { left, right } = playableBoundsAtY(y, cfg);
   const spacing = cfg.pegField.colSpacing * 2; // 못보다 큰 장애물이라 한 칸 건너 배치
   const fieldLeft = left + PEG_WALL_CLEARANCE + cfg.pinwheelBarLength / 2;
   const fieldRight = right - PEG_WALL_CLEARANCE - cfg.pinwheelBarLength / 2;
 
-  const pinwheels = [];
+  const pinwheels: PinwheelSpec[] = [];
   let index = 0;
   for (let x = fieldLeft; x <= fieldRight; x += spacing, index++) {
     const angularSpeed = index % 2 === 0 ? cfg.pinwheelAngularSpeed : -cfg.pinwheelAngularSpeed;
@@ -186,7 +218,7 @@ function buildPinwheelPositions(cfg) {
   return pinwheels;
 }
 
-function spawnX(index, total, cfg) {
+function spawnX(index: number, total: number, cfg: MapConfig): number {
   // 양 끝(벽 바로 옆)에서 출발하면 못 하나 건드리지 않고 벽을 따라 있는 빈 통로로
   // 바로 낙하해버려 재미가 없다 — 그래서 출발 위치를 "못 배열이 실제로 있는 범위"
   // 안쪽으로 한정하고, 정확히 같은 자리에서 매번 출발하지 않도록 약간의 랜덤 오차를 준다.
@@ -199,7 +231,7 @@ function spawnX(index, total, cfg) {
   return base + jitter;
 }
 
-function spawnY(buffStartY) {
+function spawnY(buffStartY: number): number {
   // buffStartY(0~200, BuffCalculator 참고)를 그대로 낙하 시작 y좌표에 더한다 — 점수 1점
   // 차이가 항상 픽셀 단위로 드러나야 하므로 더는 구간별로 뭉개서 스케일링하지 않는다.
   // 드롭존 아래(pegField.startY)까지 충분한 여유가 있어 최대값(200)에서도 못 행과 겹치지 않는다.
@@ -211,7 +243,7 @@ function spawnY(buffStartY) {
  * boardEl(뷰포트, 크기 고정·overflow:hidden) 안에 sceneEl(실제 못/벽/공이 그려지는 레이어)을
  * 두고, sceneEl에만 scale/translate 변형을 걸어 "카메라"처럼 보이게 한다.
  */
-function createScene(boardEl, cfg) {
+function createScene(boardEl: HTMLElement, cfg: MapConfig): HTMLDivElement {
   boardEl.innerHTML = '';
   boardEl.style.width = cfg.boardWidth + 'px';
   boardEl.style.height = cfg.boardHeight + 'px';
@@ -228,13 +260,13 @@ function createScene(boardEl, cfg) {
  * sceneEl을 (targetX, targetY)가 뷰포트 중앙에 오도록 scale배 확대한다.
  * scale=1, target=중앙이면 원래 상태(변형 없음)와 같다.
  */
-function applyCamera(sceneEl, cfg, targetX, targetY, scale) {
+function applyCamera(sceneEl: HTMLElement, cfg: MapConfig, targetX: number, targetY: number, scale: number) {
   const dx = cfg.boardWidth / 2 - targetX * scale;
   const dy = cfg.boardHeight / 2 - targetY * scale;
   sceneEl.style.transform = `translate(${dx}px, ${dy}px) scale(${scale})`;
 }
 
-function renderStaticElements(sceneEl, cfg) {
+function renderStaticElements(sceneEl: HTMLElement, cfg: MapConfig) {
   const dropLabel = document.createElement('div');
   dropLabel.className = 'zone-label';
   dropLabel.textContent = '낙하 시작 구역';
@@ -247,7 +279,7 @@ function renderStaticElements(sceneEl, cfg) {
   sceneEl.appendChild(finishLine);
 }
 
-function renderPegs(sceneEl, cfg) {
+function renderPegs(sceneEl: HTMLElement, cfg: MapConfig) {
   buildPegPositions(cfg).forEach((pos) => {
     const el = document.createElement('div');
     el.className = 'peg';
@@ -257,7 +289,7 @@ function renderPegs(sceneEl, cfg) {
   });
 }
 
-function renderWallVisual(sceneEl, x1, y1, x2, y2, thickness) {
+function renderWallVisual(sceneEl: HTMLElement, x1: number, y1: number, x2: number, y2: number, thickness: number) {
   const dx = x2 - x1;
   const dy = y2 - y1;
   const length = Math.sqrt(dx * dx + dy * dy);
@@ -273,7 +305,7 @@ function renderWallVisual(sceneEl, x1, y1, x2, y2, thickness) {
   sceneEl.appendChild(el);
 }
 
-function renderPinwheelVisual(sceneEl, pos, cfg) {
+function renderPinwheelVisual(sceneEl: HTMLElement, pos: PinwheelSpec, cfg: MapConfig): HTMLDivElement {
   const el = document.createElement('div');
   el.className = 'spinner-bar';
   el.style.width = cfg.pinwheelBarLength + 'px';
@@ -284,7 +316,12 @@ function renderPinwheelVisual(sceneEl, pos, cfg) {
   return el;
 }
 
-function buildBoard(adapter, sceneEl, cfg) {
+interface SpinnerState {
+  body: Matter.Body;
+  el: HTMLDivElement;
+}
+
+function buildBoard(adapter: MatterAdapter, sceneEl: HTMLElement, cfg: MapConfig): SpinnerState[] {
   renderStaticElements(sceneEl, cfg);
   renderPegs(sceneEl, cfg);
 
@@ -292,7 +329,7 @@ function buildBoard(adapter, sceneEl, cfg) {
     adapter.addStaticCircle(pos.x, pos.y, cfg.pegField.pegRadius, 0.5);
   });
 
-  const spinners = buildPinwheelPositions(cfg).map((pos) => {
+  const spinners: SpinnerState[] = buildPinwheelPositions(cfg).map((pos) => {
     const body = adapter.addKinematicRect(pos.x, pos.y, cfg.pinwheelBarLength, cfg.pinwheelBarThickness, pos.angularSpeed);
     const el = renderPinwheelVisual(sceneEl, pos, cfg);
     return { body, el };
@@ -320,7 +357,7 @@ function buildBoard(adapter, sceneEl, cfg) {
   return spinners;
 }
 
-function createBallEl(sceneEl, name, colorIndex) {
+function createBallEl(sceneEl: HTMLElement, name: string, colorIndex: number): HTMLDivElement {
   const palette = ['#6b7280', '#4ade80', '#38bdf8', '#a78bfa', '#ffd166', '#f472b6', '#fb923c', '#22d3ee'];
   const el = document.createElement('div');
   el.className = 'ball';
@@ -330,7 +367,11 @@ function createBallEl(sceneEl, name, colorIndex) {
   return el;
 }
 
-function renderRankPanel(rankListEl, finishedEntries, pendingNames) {
+interface FinishedEntry {
+  name: string;
+}
+
+function renderRankPanel(rankListEl: HTMLElement, finishedEntries: FinishedEntry[], pendingNames: Set<string>) {
   rankListEl.innerHTML = '';
   const total = finishedEntries.length + pendingNames.size;
 
@@ -354,102 +395,124 @@ function renderRankPanel(rankListEl, finishedEntries, pendingNames) {
   }
 }
 
+interface BallState {
+  playerId: number;
+  name: string;
+  body: Matter.Body;
+  el: HTMLDivElement;
+  finished: boolean;
+  stallTicks: number;
+}
+
+export interface RunPinballGameOptions {
+  boardEl: HTMLElement;
+  rankListEl: HTMLElement;
+  participants: GameParticipant[];
+  onComplete: (finishOrder: number[]) => void;
+}
+
 /**
- * @param {Object} opts
- * @param {HTMLElement} opts.boardEl - .pinball-board 컨테이너
- * @param {HTMLElement} opts.rankListEl - 순위를 표시할 컨테이너
- * @param {Array<{playerId:number,name:string,buff:{startY:number}}>} opts.participants
- * @param {(finishOrderPlayerIds:number[]) => void} opts.onComplete
+ * @returns dispose 함수 — 게임이 끝나기 전에 컴포넌트가 언마운트되는 경우
+ * (StrictMode 이중 실행, 라우터 이동 등) 호출해서 물리 엔진을 확실히 정리한다.
+ * (devhelp/18의 StrictMode 이중 실행 항목, devhelp/21 참고)
  */
-async function runPinballGame({ boardEl, rankListEl, participants, onComplete }) {
+export function runPinballGame({ boardEl, rankListEl, participants, onComplete }: RunPinballGameOptions): () => void {
   const cfg = CLASSIC_GALTON_MAP;
   const adapter = new MatterAdapter();
-  await adapter.init();
-  adapter.setGravity(cfg.gravityScale);
+  let disposed = false;
 
-  const sceneEl = createScene(boardEl, cfg);
-  const spinners = buildBoard(adapter, sceneEl, cfg);
+  adapter.init().then(() => {
+    if (disposed) return;
+    adapter.setGravity(cfg.gravityScale);
 
-  const ballStates = [];
-  const pendingNames = new Set();
+    const sceneEl = createScene(boardEl, cfg);
+    const spinners = buildBoard(adapter, sceneEl, cfg);
 
-  participants.forEach((participant, index) => {
-    const x = spawnX(index, participants.length, cfg);
-    const y = spawnY(participant.buff.startY);
-    const body = adapter.addBall(x, y, cfg.ballRadius, cfg.restitution);
-    const el = createBallEl(sceneEl, participant.name, index);
-    ballStates.push({
-      playerId: participant.playerId,
-      name: participant.name,
-      body,
-      el,
-      finished: false,
-      stallTicks: 0,
+    const ballStates: BallState[] = [];
+    const pendingNames = new Set<string>();
+
+    participants.forEach((participant, index) => {
+      const x = spawnX(index, participants.length, cfg);
+      const y = spawnY(participant.buff.startY);
+      const body = adapter.addBall(x, y, cfg.ballRadius, cfg.restitution);
+      const el = createBallEl(sceneEl, participant.name, index);
+      ballStates.push({
+        playerId: participant.playerId,
+        name: participant.name,
+        body,
+        el,
+        finished: false,
+        stallTicks: 0,
+      });
+      pendingNames.add(participant.name);
     });
-    pendingNames.add(participant.name);
-  });
 
-  const finishOrder = [];
-  const finishedEntries = [];
-  renderRankPanel(rankListEl, finishedEntries, pendingNames);
-  applyCamera(sceneEl, cfg, cfg.boardWidth / 2, cfg.boardHeight / 2, 1);
+    const finishOrder: number[] = [];
+    const finishedEntries: FinishedEntry[] = [];
+    renderRankPanel(rankListEl, finishedEntries, pendingNames);
+    applyCamera(sceneEl, cfg, cfg.boardWidth / 2, cfg.boardHeight / 2, 1);
 
-  adapter.run(() => {
-    for (const spinner of spinners) {
-      spinner.el.style.transform = `rotate(${adapter.getAngle(spinner.body)}rad)`;
-    }
+    adapter.run(() => {
+      for (const spinner of spinners) {
+        spinner.el.style.transform = `rotate(${adapter.getAngle(spinner.body)}rad)`;
+      }
 
-    let allFinished = true;
-    const unfinished = [];
+      let allFinished = true;
+      const unfinished: { state: BallState; pos: { x: number; y: number } }[] = [];
 
-    for (const state of ballStates) {
-      const pos = adapter.getPosition(state.body);
-      state.el.style.left = pos.x + 'px';
-      state.el.style.top = pos.y + 'px';
+      for (const state of ballStates) {
+        const pos = adapter.getPosition(state.body);
+        state.el.style.left = pos.x + 'px';
+        state.el.style.top = pos.y + 'px';
 
-      if (!state.finished) {
-        if (pos.y >= cfg.finishLineY) {
-          state.finished = true;
-          state.el.classList.add('finished');
-          finishOrder.push(state.playerId);
-          finishedEntries.push({ name: state.name });
-          pendingNames.delete(state.name);
-          renderRankPanel(rankListEl, finishedEntries, pendingNames);
-        } else {
-          allFinished = false;
-          unfinished.push({ state, pos });
+        if (!state.finished) {
+          if (pos.y >= cfg.finishLineY) {
+            state.finished = true;
+            state.el.classList.add('finished');
+            finishOrder.push(state.playerId);
+            finishedEntries.push({ name: state.name });
+            pendingNames.delete(state.name);
+            renderRankPanel(rankListEl, finishedEntries, pendingNames);
+          } else {
+            allFinished = false;
+            unfinished.push({ state, pos });
 
-          // 못/벽 사이의 기하학적 틈에 구슬이 물리적으로 끼어 멈춰버리는 경우가 실제로
-          // 관찰되어(공이 결승선에 영영 도달하지 못함) 안전장치로 넣은 로직 —
-          // 일정 시간 이상 거의 정지해 있으면 살짝 흔들어서 다시 굴러가게 만든다.
-          if (adapter.getSpeed(state.body) < 0.05) {
-            state.stallTicks++;
-            if (state.stallTicks > 45) {
-              adapter.nudge(state.body);
+            // 못/벽 사이의 기하학적 틈에 구슬이 물리적으로 끼어 멈춰버리는 경우가 실제로
+            // 관찰되어(공이 결승선에 영영 도달하지 못함) 안전장치로 넣은 로직.
+            if (adapter.getSpeed(state.body) < 0.05) {
+              state.stallTicks++;
+              if (state.stallTicks > 45) {
+                adapter.nudge(state.body);
+                state.stallTicks = 0;
+              }
+            } else {
               state.stallTicks = 0;
             }
-          } else {
-            state.stallTicks = 0;
           }
         }
       }
-    }
 
-    // "선두 추적" 연출: 완주 안 한 공 중 가장 앞선(y가 가장 큰) 공을 계속 따라간다.
-    // 그 공이 완주하면 다음 틱엔 자동으로 새로운 선두(원래 2등)가 이 계산에 잡힌다.
-    // 낙하 초반(zoomStartY 이전)은 혼전이라 확대하지 않고 넓은 시야를 유지한다.
-    if (!allFinished) {
-      const leading = unfinished.reduce((a, b) => (a.pos.y >= b.pos.y ? a : b));
-      if (leading.pos.y >= cfg.zoomStartY) {
-        applyCamera(sceneEl, cfg, leading.pos.x, leading.pos.y, ZOOM_SCALE);
-      } else {
-        applyCamera(sceneEl, cfg, cfg.boardWidth / 2, cfg.boardHeight / 2, 1);
+      // "선두 추적" 연출: 완주 안 한 공 중 가장 앞선(y가 가장 큰) 공을 계속 따라간다.
+      // 그 공이 완주하면 다음 틱엔 자동으로 새로운 선두(원래 2등)가 이 계산에 잡힌다.
+      // 낙하 초반(zoomStartY 이전)은 혼전이라 확대하지 않고 넓은 시야를 유지한다.
+      if (!allFinished) {
+        const leading = unfinished.reduce((a, b) => (a.pos.y >= b.pos.y ? a : b));
+        if (leading.pos.y >= cfg.zoomStartY) {
+          applyCamera(sceneEl, cfg, leading.pos.x, leading.pos.y, ZOOM_SCALE);
+        } else {
+          applyCamera(sceneEl, cfg, cfg.boardWidth / 2, cfg.boardHeight / 2, 1);
+        }
       }
-    }
 
-    if (allFinished) {
-      adapter.dispose();
-      onComplete(finishOrder);
-    }
+      if (allFinished) {
+        adapter.dispose();
+        onComplete(finishOrder);
+      }
+    });
   });
+
+  return () => {
+    disposed = true;
+    adapter.dispose();
+  };
 }

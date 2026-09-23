@@ -4,5 +4,7 @@ Thumbs.db
 .vscode/
 .idea/
 
-# 미래에 프론트엔드 도구를 추가하게 되면 대비
+# 프론트엔드 빌드 도구 (frontend-react)
 node_modules/
+dist/
+*.tsbuildinfo

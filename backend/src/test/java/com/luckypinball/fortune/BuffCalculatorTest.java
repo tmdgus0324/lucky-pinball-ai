@@ -8,16 +8,24 @@ import org.junit.jupiter.api.Test;
 class BuffCalculatorTest {
 
     @Test
-    void boundaryScoresMapToExpectedTiers() {
-        assertEquals(new Buff(4, 60), BuffCalculator.fromScore(0));
-        assertEquals(new Buff(4, 60), BuffCalculator.fromScore(19));
-        assertEquals(new Buff(3, 45), BuffCalculator.fromScore(20));
-        assertEquals(new Buff(3, 45), BuffCalculator.fromScore(39));
-        assertEquals(new Buff(2, 30), BuffCalculator.fromScore(40));
-        assertEquals(new Buff(2, 30), BuffCalculator.fromScore(59));
-        assertEquals(new Buff(1, 15), BuffCalculator.fromScore(60));
-        assertEquals(new Buff(1, 15), BuffCalculator.fromScore(79));
-        assertEquals(new Buff(0, 0), BuffCalculator.fromScore(80));
+    void tierBoundariesStillMatchScoreBands() {
+        assertEquals(4, BuffCalculator.fromScore(0).tier());
+        assertEquals(4, BuffCalculator.fromScore(19).tier());
+        assertEquals(3, BuffCalculator.fromScore(20).tier());
+        assertEquals(3, BuffCalculator.fromScore(39).tier());
+        assertEquals(2, BuffCalculator.fromScore(40).tier());
+        assertEquals(2, BuffCalculator.fromScore(59).tier());
+        assertEquals(1, BuffCalculator.fromScore(60).tier());
+        assertEquals(1, BuffCalculator.fromScore(79).tier());
+        assertEquals(0, BuffCalculator.fromScore(80).tier());
+        assertEquals(0, BuffCalculator.fromScore(100).tier());
+    }
+
+    @Test
+    void startYIsLinearInScoreSoEveryPointMakesAVisibleDifference() {
+        assertEquals(new Buff(4, 200), BuffCalculator.fromScore(0));
+        assertEquals(new Buff(1, 60), BuffCalculator.fromScore(70));
+        assertEquals(new Buff(1, 58), BuffCalculator.fromScore(71));
         assertEquals(new Buff(0, 0), BuffCalculator.fromScore(100));
     }
 }

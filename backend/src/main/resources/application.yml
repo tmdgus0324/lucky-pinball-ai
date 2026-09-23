@@ -1,5 +1,6 @@
 server:
-  port: 8080
+  # Render 등 플랫폼은 PORT 환경변수로 포트를 지정한다. 로컬은 기존처럼 8080.
+  port: ${PORT:8080}
 
 spring:
   application:
