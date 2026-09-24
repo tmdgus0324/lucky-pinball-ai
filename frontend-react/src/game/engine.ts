@@ -41,7 +41,10 @@ const CLASSIC_GALTON_MAP: MapConfig = {
   name: '클래식 갈톤보드',
   boardWidth: 560,
   boardHeight: 1500,
-  pegField: { rows: 20, colSpacing: 60, rowSpacing: 50, startY: 280, pegRadius: 7 },
+  // startY(280)는 devhelp/26에서 상대평가 도입 후 buff.startY 최대값이 200->260으로
+  // 커지면서 340으로 올렸다 — spawnY 최대값(20+260=280)과 정확히 같으면 여유가 0이 되어
+  // devhelp/25에서 고친 "공이 못 행과 겹쳐서 끼는" 문제가 재발한다. 60px 여유를 다시 확보.
+  pegField: { rows: 20, colSpacing: 60, rowSpacing: 50, startY: 340, pegRadius: 7 },
   finishLineY: 1400,
   funnelBottomMargin: 50,
   ballRadius: 13,
@@ -51,7 +54,7 @@ const CLASSIC_GALTON_MAP: MapConfig = {
   pinwheelBarLength: 100,
   pinwheelBarThickness: 10,
   pinwheelAngularSpeed: 0.05,
-  zoomStartY: 280 + 5 * 50, // 못 5행을 통과한 뒤부터 카메라 추적 시작
+  zoomStartY: 340 + 5 * 50, // 못 5행을 통과한 뒤부터 카메라 추적 시작 (startY 변경에 맞춰 같이 조정)
 };
 
 // "선두 추적" 연출: 완주하지 못한 공 중 가장 앞선(=현재 1등) 공을 계속 따라가며 확대한다.

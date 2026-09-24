@@ -39,23 +39,24 @@ export function PlayersTable() {
             <th>ID</th>
             <th>이름</th>
             <th>생년월일</th>
-            <th>운세 이력 (날짜 · 점수)</th>
+            <th>AI 호출</th>
+            <th>운세 이력 (날짜 · 점수 · 출처)</th>
           </tr>
         </thead>
         <tbody>
           {error && (
             <tr>
-              <td colSpan={4}>불러오기 실패: {error}</td>
+              <td colSpan={5}>불러오기 실패: {error}</td>
             </tr>
           )}
           {!error && players === null && (
             <tr>
-              <td colSpan={4}>불러오는 중...</td>
+              <td colSpan={5}>불러오는 중...</td>
             </tr>
           )}
           {!error && players !== null && players.length === 0 && (
             <tr>
-              <td colSpan={4}>등록된 참가자가 없습니다.</td>
+              <td colSpan={5}>등록된 참가자가 없습니다.</td>
             </tr>
           )}
           {!error &&
@@ -65,8 +66,13 @@ export function PlayersTable() {
                 <td>{player.name}</td>
                 <td>{player.birthDate || '미입력'}</td>
                 <td>
+                  {player.fortuneSource === 'AI' ? 'Y' : player.fortuneSource === 'CACHE' ? 'N' : '-'}
+                </td>
+                <td>
                   {player.fortuneHistory.length
-                    ? player.fortuneHistory.map((h) => `${h.createdDate} · ${h.fortuneScore}`).join('  →  ')
+                    ? player.fortuneHistory
+                        .map((h) => `${h.createdDate} · ${h.fortuneScore} · ${h.source === 'AI' ? 'AI 호출' : '기존 데이터'}`)
+                        .join('  →  ')
                     : '이력 없음'}
                 </td>
               </tr>

@@ -1,12 +1,15 @@
 package com.luckypinball.game;
 
 import com.luckypinball.common.ApiException;
+import com.luckypinball.fortune.BuffCalculator;
+import com.luckypinball.fortune.BuffCalculator.Buff;
 import com.luckypinball.fortune.FortuneQueryService;
 import com.luckypinball.fortune.FortuneQueryService.FortuneQueryResult;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.OptionalInt;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -35,9 +38,37 @@ public class GameService {
         List<GameParticipant> participants = playerIds.stream()
                 .map(this::toParticipant)
                 .collect(Collectors.toList());
+        participants = applyRelativeStartY(participants);
 
         GameSession session = new GameSession(UUID.randomUUID().toString(), participants);
         return gameRepository.save(session);
+    }
+
+    /**
+     * 개별 조회(POST /api/fortune)는 참가자 한 명씩 독립 호출이라 상대평가를 할 수 없다 —
+     * 이번 판 전체 참가자의 점수를 다 알 수 있는 지점(게임 생성 시점)에서만 계산 가능하다.
+     * (devhelp/26 참고 — AI 점수가 좁은 범위에 몰려도 시작 높이 차이가 항상 드러나게 함)
+     */
+    private List<GameParticipant> applyRelativeStartY(List<GameParticipant> participants) {
+        OptionalInt maxScore = participants.stream()
+                .filter(p -> p.fortuneScore() != null)
+                .mapToInt(GameParticipant::fortuneScore)
+                .max();
+        if (maxScore.isEmpty()) {
+            return participants; // 아무도 실제 점수가 없으면(전원 생년월일 미입력) 그대로 둔다
+        }
+
+        return participants.stream()
+                .map(p -> {
+                    if (p.fortuneScore() == null) {
+                        return p; // 생년월일 미입력(NONE)은 상대 비교 대상이 아니다 — 기존 Buff(0,0) 유지
+                    }
+                    int startY = BuffCalculator.relativeStartY(p.fortuneScore(), maxScore.getAsInt());
+                    Buff relativeBuff = new Buff(p.buff().tier(), startY);
+                    return new GameParticipant(
+                            p.playerId(), p.name(), p.fortuneScore(), p.luckyNumber(), p.fortuneMessage(), relativeBuff);
+                })
+                .collect(Collectors.toList());
     }
 
     public GameSession start(String gameId) {

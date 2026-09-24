@@ -94,6 +94,7 @@ export interface GameResultView {
 export interface FortuneHistoryEntry {
   createdDate: string;
   fortuneScore: number;
+  source: FortuneSource;
 }
 
 export interface AdminPlayer {
@@ -101,6 +102,8 @@ export interface AdminPlayer {
   name: string;
   birthDate: string | null;
   fortuneHistory: FortuneHistoryEntry[];
+  /** 이 참가자에서 AI를 호출한 적이 있으면 'AI', 기존 데이터만 썼으면 'CACHE', 아직 조회한 적 없으면 null. */
+  fortuneSource: FortuneSource | null;
 }
 
 export interface AdminGame {

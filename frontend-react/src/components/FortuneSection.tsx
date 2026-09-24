@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { api, type FortuneResponse, type FortuneSource, type Player } from '../api/client';
+import { computeRelativeStartY } from '../utils/relativeBuff';
 
 const SOURCE_LABEL: Record<FortuneSource, string> = {
   AI: 'AI 분석 (1회차)',
@@ -23,6 +24,15 @@ export function FortuneSection({ players, quickAddIds, onFortunesReady }: Fortun
   const canCheck = players.length >= 2 && players.length <= 8;
   const quickPlayers = players.filter((p) => quickAddIds.has(p.playerId));
   const apiPlayers = players.filter((p) => !quickAddIds.has(p.playerId));
+
+  // 실제 게임 시작 시 서버가 계산할 상대평가와 같은 결과를 미리 보여준다(devhelp/26) —
+  // 생년월일 미입력(NONE) 참가자는 애초에 점수가 없으니 이 비교 대상에서 제외.
+  const maxScoreInGroup = useMemo(() => {
+    const scores = results
+      .filter((r): r is FortuneResponse & { fortuneScore: number } => r.source !== 'NONE' && r.fortuneScore != null)
+      .map((r) => r.fortuneScore);
+    return scores.length ? Math.max(...scores) : 0;
+  }, [results]);
 
   async function handleCheckFortune() {
     setChecking(true);
@@ -68,7 +78,9 @@ export function FortuneSection({ players, quickAddIds, onFortunesReady }: Fortun
       <h2>2. 오늘의 운세 &amp; 버프</h2>
       <p className="desc">
         버프는 <strong>시작 높이</strong> 한 가지만 차등을 둡니다 — 운세가 좋을수록 결승선에서 먼 곳(위)에서, 운세가
-        안 좋을수록 결승선에 가까운 곳(아래)에서 출발합니다.
+        안 좋을수록 결승선에 가까운 곳(아래)에서 출발합니다. 점수는 절대값이 아니라{' '}
+        <strong>이번에 등록된 참가자들 중 최고점자 대비 상대 순위</strong>로 반영되며(최대 공 10개 차이), 참가자
+        구성이 바뀌면 다시 "운세 확인"을 눌러야 합니다.
       </p>
 
       <div className="actions-row">
@@ -89,6 +101,12 @@ export function FortuneSection({ players, quickAddIds, onFortunesReady }: Fortun
           const player = players.find((p) => p.playerId === fortune.playerId);
           const buffLabel = fortune.buff.tier === 0 ? '버프 없음' : `버프 ${fortune.buff.tier}`;
           const sourceLabel = SOURCE_LABEL[fortune.source] ?? fortune.source;
+          // NONE(생년월일 미입력)은 원래 버프가 0이라 그대로 두고, 실제 점수가 있는 참가자만
+          // "이번에 등록된 사람들 중 최고점자 대비 몇 점 차이인지"로 다시 계산해서 보여준다.
+          const displayStartY =
+            fortune.source === 'NONE' || fortune.fortuneScore == null
+              ? fortune.buff.startY
+              : computeRelativeStartY(fortune.fortuneScore, maxScoreInGroup);
           return (
             <div className={`fortune-card tier-${fortune.buff.tier}`} key={fortune.playerId}>
               <div className="name">{player ? player.name : fortune.playerId}</div>
@@ -105,7 +123,7 @@ export function FortuneSection({ players, quickAddIds, onFortunesReady }: Fortun
               )}
               <div className="stats">
                 <span>{buffLabel}</span>
-                <span>시작 높이 +{fortune.buff.startY}</span>
+                <span>시작 높이 +{displayStartY}</span>
                 <span>{sourceLabel}</span>
               </div>
             </div>

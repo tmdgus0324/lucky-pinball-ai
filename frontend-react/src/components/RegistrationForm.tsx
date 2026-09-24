@@ -1,6 +1,7 @@
 import { useRef, useState, type FormEvent } from 'react';
 import { api, type Player } from '../api/client';
 import { parseBirthDateShorthand } from '../utils/birthDate';
+import { randomBirthDateIso, randomKoreanName } from '../utils/aiTest';
 
 interface RegistrationFormProps {
   players: Player[];
@@ -15,9 +16,12 @@ export function RegistrationForm({ players, onRegistered, onQuickAdd, onRemove }
   const [status, setStatus] = useState<{ text: string; error: boolean }>({ text: '', error: false });
   const [quickCount, setQuickCount] = useState(1);
   const [quickAdding, setQuickAdding] = useState(false);
+  const [aiTesting, setAiTesting] = useState(false);
+  const [dbTesting, setDbTesting] = useState(false);
   const quickAddSeq = useRef(1);
 
   const remainingSlots = 8 - players.length;
+  const busy = quickAdding || aiTesting || dbTesting;
 
   async function handleQuickAdd() {
     setQuickAdding(true);
@@ -38,6 +42,86 @@ export function RegistrationForm({ players, onRegistered, onQuickAdd, onRemove }
       if (added.length > 0) onQuickAdd(added); // 일부라도 성공한 만큼은 반영
     } finally {
       setQuickAdding(false);
+    }
+  }
+
+  /**
+   * 이름/생년월일을 손으로 안 쳐도 실제 AI 호출·캐시 재사용 흐름을 바로 시연할 수 있게,
+   * 임의의 한글 3글자 이름 + 임의 생년월일로 선택한 인원수만큼 즉시 등록한다. 빠른 추가와
+   * 달리 생년월일을 실제로 넣어서 보내므로, "운세 확인"을 누르면 진짜 Claude가 호출된다.
+   */
+  async function handleAiTest() {
+    setAiTesting(true);
+    setStatus({ text: '', error: false });
+    const count = Math.min(quickCount, remainingSlots);
+    const added: Player[] = [];
+    try {
+      for (let i = 0; i < count; i++) {
+        // eslint-disable-next-line no-await-in-loop
+        const player = await api.registerPlayer(randomKoreanName(), randomBirthDateIso());
+        added.push(player);
+      }
+      added.forEach(onRegistered);
+      setStatus({ text: `${players.length + added.length}/8명 등록됨 (AI TEST)`, error: false });
+    } catch (error) {
+      setStatus({ text: `AI TEST 등록 실패: ${(error as Error).message}`, error: true });
+      added.forEach(onRegistered); // 일부라도 성공한 만큼은 반영
+    } finally {
+      setAiTesting(false);
+    }
+  }
+
+  /**
+   * AI TEST는 매번 새 신원이라 항상 AI가 호출된다. "2회차 방문 → DB 재사용"을 시연하려면
+   * 이미 운세 결과가 DB에 있는 신원(이름+생년월일)으로 다시 등록해야 한다 — 캐시 키가
+   * playerId가 아니라 이름+생년월일이라서, 새 참가자 행(새 playerId)으로 재등록해도 캐시가
+   * 적중하고, 관리자 화면에도 "AI 호출 = N"인 새 행이 뚜렷하게 남는다.
+   */
+  async function handleDbTest() {
+    setDbTesting(true);
+    setStatus({ text: '', error: false });
+    const added: Player[] = [];
+    try {
+      const existing = await api.adminGetPlayers();
+      const usedNames = new Set(players.map((p) => p.name));
+      const seen = new Set<string>();
+      const candidates = existing.filter((p) => {
+        // 출처(AI/CACHE)가 실제로 기록된 신원만 — 캐시는 이름+생년월일 컬럼으로 조회하는데,
+        // 출처가 없는 옛 이력(Mock 시절)은 그 컬럼이 비어 있어 캐시에 안 걸리고 AI가 호출된다.
+        if (p.birthDate == null || p.fortuneSource == null) return false;
+        const key = `${p.name}|${p.birthDate}`;
+        if (seen.has(key) || usedNames.has(p.name)) return false;
+        seen.add(key);
+        return true;
+      });
+
+      if (candidates.length === 0) {
+        setStatus({
+          text: 'DB에 재사용할 기존 참가자가 없습니다 — 먼저 AI TEST로 등록하고 운세 확인을 해주세요.',
+          error: true,
+        });
+        return;
+      }
+
+      // Fisher-Yates가 아니어도 되는 규모라 정렬 기반으로 간단히 섞는다.
+      const picked = [...candidates].sort(() => Math.random() - 0.5).slice(0, Math.min(quickCount, remainingSlots));
+      for (const c of picked) {
+        // eslint-disable-next-line no-await-in-loop
+        added.push(await api.registerPlayer(c.name, c.birthDate));
+      }
+      added.forEach(onRegistered);
+      const shortfall = Math.min(quickCount, remainingSlots) - added.length;
+      setStatus({
+        text:
+          `${players.length + added.length}/8명 등록됨 (DB TEST)` +
+          (shortfall > 0 ? ` — 재사용 가능한 기존 참가자가 ${added.length}명뿐이라 그만큼만 등록했습니다.` : ''),
+        error: false,
+      });
+    } catch (error) {
+      setStatus({ text: `DB TEST 등록 실패: ${(error as Error).message}`, error: true });
+      added.forEach(onRegistered);
+    } finally {
+      setDbTesting(false);
     }
   }
 
@@ -92,7 +176,7 @@ export function RegistrationForm({ players, onRegistered, onQuickAdd, onRemove }
             value={Math.min(quickCount, Math.max(remainingSlots, 1))}
             onChange={(e) => setQuickCount(Number(e.target.value))}
             disabled={remainingSlots <= 0}
-            title="빠른 추가할 인원수"
+            title="빠른 추가/AI TEST에 쓸 인원수"
           >
             {Array.from({ length: Math.max(remainingSlots, 1) }, (_, i) => i + 1).map((n) => (
               <option key={n} value={n}>
@@ -103,7 +187,7 @@ export function RegistrationForm({ players, onRegistered, onQuickAdd, onRemove }
           <button
             type="button"
             className="secondary"
-            disabled={remainingSlots <= 0 || quickAdding}
+            disabled={remainingSlots <= 0 || busy}
             onClick={handleQuickAdd}
           >
             빠른 추가
@@ -127,11 +211,23 @@ export function RegistrationForm({ players, onRegistered, onQuickAdd, onRemove }
           value={birthInput}
           onChange={(e) => setBirthInput(e.target.value)}
         />
-        <button type="submit">참가자 등록</button>
+        <button type="submit" disabled={busy}>
+          참가자 등록
+        </button>
+        <button type="button" className="secondary" disabled={remainingSlots <= 0 || busy} onClick={handleAiTest}>
+          AI TEST
+        </button>
+        <button type="button" className="secondary" disabled={remainingSlots <= 0 || busy} onClick={handleDbTest}>
+          DB TEST
+        </button>
       </form>
       <p className="desc" style={{ marginTop: 6 }}>
         "빠른 추가"로 참여한 참가자는 이름/생년월일 입력과 AI 운세 호출 없이 즉시 참여합니다 — 대신 무작위로
-        시작 높이가 정해지며, 그 값은 공개되지 않고 게임에서 높이 차이로만 드러납니다.
+        시작 높이가 정해지며, 그 값은 공개되지 않고 게임에서 높이 차이로만 드러납니다. <strong>"AI TEST"</strong>는
+        반대로 임의의 한글 이름 + 생년월일로 <strong>실제 AI 호출·캐시 재사용 흐름을 그대로</strong> 시연해보고
+        싶을 때 씁니다(선택한 인원수만큼 즉시 등록, 운세 확인을 눌러야 실제 호출이 일어남). <strong>"DB TEST"</strong>는
+        이미 운세 결과가 DB에 있는 기존 참가자(이름+생년월일)를 다시 등록해서, AI 호출 없이{' '}
+        <strong>기존 데이터를 재사용</strong>하는 2회차 흐름을 시연합니다.
       </p>
 
       <div className="player-list">

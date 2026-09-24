@@ -143,13 +143,30 @@
 
   const SOURCE_LABEL = { AI: 'AI 분석 (1회차)', CACHE: '이전 기록 재사용', NONE: '생년월일 미입력' };
 
+  // 실제 게임 시작 시 서버(GameService.applyRelativeStartY)가 계산하는 것과 반드시 같은
+  // 결과가 나와야 하므로, 두 상수는 backend/.../fortune/BuffCalculator.java와 항상
+  // 일치시켜야 한다(devhelp/26 — frontend-react의 utils/relativeBuff.ts와 동일한 로직).
+  const RELATIVE_GAP_CAP = 10;
+  const BALL_DIAMETER_PX = 26;
+
+  function computeRelativeStartY(myScore, maxScoreInGroup) {
+    const gap = Math.min(RELATIVE_GAP_CAP, Math.max(0, maxScoreInGroup - myScore));
+    return gap * BALL_DIAMETER_PX;
+  }
+
   function renderFortuneGrid(results) {
+    // 생년월일 미입력(NONE)은 점수가 없으니 상대 비교 대상에서 제외.
+    const scores = results.filter((f) => f.source !== 'NONE').map((f) => f.fortuneScore);
+    const maxScoreInGroup = scores.length ? Math.max(...scores) : 0;
+
     results.forEach((fortune) => {
       const player = state.players.find((p) => p.playerId === fortune.playerId);
       const card = document.createElement('div');
       card.className = `fortune-card tier-${fortune.buff.tier}`;
       const buffLabel = fortune.buff.tier === 0 ? '버프 없음' : `버프 ${fortune.buff.tier}`;
       const sourceLabel = SOURCE_LABEL[fortune.source] || fortune.source;
+      const displayStartY =
+        fortune.source === 'NONE' ? fortune.buff.startY : computeRelativeStartY(fortune.fortuneScore, maxScoreInGroup);
 
       const scoreBlock =
         fortune.source === 'NONE'
@@ -160,7 +177,7 @@
       card.innerHTML = `
         <div class="name">${player ? player.name : fortune.playerId}</div>
         ${scoreBlock}
-        <div class="stats"><span>${buffLabel}</span><span>시작 높이 +${fortune.buff.startY}</span><span>${sourceLabel}</span></div>
+        <div class="stats"><span>${buffLabel}</span><span>시작 높이 +${displayStartY}</span><span>${sourceLabel}</span></div>
       `;
       els.fortuneGrid.appendChild(card);
     });
