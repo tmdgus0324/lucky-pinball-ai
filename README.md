@@ -1,5 +1,7 @@
 # AI Lucky Pinball
 
+[![CI](https://github.com/tmdgus0324/lucky-pinball-ai/actions/workflows/ci.yml/badge.svg)](https://github.com/tmdgus0324/lucky-pinball-ai/actions/workflows/ci.yml)
+
 사다리타기 대신 만든 웹 추첨 게임입니다. 이름과 생년월일을 입력하면 Claude가 그날의 운세를 분석해서, 운세가 좋을수록 핀볼 트랙에서 더 낮은(불리한) 위치에서 출발합니다. 참가자들은 물리 엔진 위에서 결승선까지 굴러가고, 가장 늦게 도착한 사람이 당첨자입니다.
 
 - 데모: https://lucky-pinball-ai.vercel.app
