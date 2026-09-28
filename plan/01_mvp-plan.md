@@ -6,7 +6,7 @@
 
 ## 1. 목표와 범위
 
-기획서(`../AI_Lucky_Pinball_Project.md`)가 그리는 전체 아키텍처(Spring Boot + MySQL/H2 + Redis + OpenAI + GitHub Pages/Render 배포)를 한 번에 만들지 않고, **핵심 루프가 실제로 동작하는 MVP**부터 만든다.
+기획서(`00_original-concept.md`)가 그리는 전체 아키텍처(Spring Boot + MySQL/H2 + Redis + OpenAI + GitHub Pages/Render 배포)를 한 번에 만들지 않고, **핵심 루프가 실제로 동작하는 MVP**부터 만든다.
 
 핵심 루프: 참가자 등록 → 운세 분석 → 버프(시작 높이) 적용 → Matter.js 핀볼 맵에서 결승선 통과 순서 경쟁 → 가장 마지막 통과자를 "당첨자"로 결정 → 결과 기록.
 
@@ -30,8 +30,8 @@
 
 ```
 01_LuckyPinballAI/
-├── AI_Lucky_Pinball_Project.md     # 원본 기획서
 ├── plan/                            # 이 문서를 포함한 설계 문서 + 목업 (현재 단계 산출물)
+│   ├── 00_original-concept.md      # 원본 기획서
 │   ├── 01_mvp-plan.md
 │   ├── 02_api-spec.md
 │   ├── 03_db-schema.md
