@@ -1,33 +1,32 @@
-# 🎱 AI Lucky Pinball
+# AI Lucky Pinball
 
-이름과 생년월일을 입력하면 AI(Claude)가 오늘의 운세를 분석해 운세가 좋을 수록 높은 위치에서 시작할 수 있도록 합니다. 참가자들이 물리 엔진 기반 핀볼 맵에서 결승선을 향해 경쟁합니다. 가장 마지막에 결승선을 통과한 사람이 당첨자가 되는 웹 추첨 게임입니다.
+사다리타기 대신 만든 웹 추첨 게임입니다. 이름과 생년월일을 입력하면 Claude가 그날의 운세를 분석해서, 운세가 좋을수록 핀볼 트랙에서 더 낮은(불리한) 위치에서 출발합니다. 참가자들은 물리 엔진 위에서 결승선까지 굴러가고, 가장 늦게 도착한 사람이 당첨자입니다.
 
-- TEST URL : https://lucky-pinball-ai.vercel.app
-- 백엔드가 한동안 접속이 없으면 서버가 내려가고, 첫 요청은 30~60초 걸릴 수 있습니다. 이때 저장된 데이터도 초기화됩니다.
+- 데모: https://lucky-pinball-ai.vercel.app
+- Render 무료 티어라 한동안 접속이 없으면 슬립 상태가 되어 첫 요청에 30~60초 정도 걸리고, 저장된 데이터도 함께 초기화됩니다(H2 파일 DB, 영속 디스크 미지원).
 
-## 주요 기능
+## 기능
 
-- **참가자 등록**: 이름 + 생년월일(선택, 6자리). 생년월일이 없으면 AI 호출 없이 바로 참여합니다.
-- **AI 운세**: Claude(Haiku 4.5)가 점수·행운의 숫자·메시지를 생성합니다.
-- **DB 재사용**: 같은 이름+생년월일은 처음 한 번만 AI를 호출하고 이후에는 DB 값을 씁니다.
-- **상대평가 버프**: 이번 판 참가자 중 최고점자 대비 점수 차이만큼(최대 10점 = 공 10개) 아래에서 출발합니다.
-- **핀볼 게임**: Matter.js 갈톤보드에 회전 막대 장애물이 있고, 카메라가 선두 공을 따라갑니다.
-- **관리자 화면**: 참가자별 운세 이력(AI 호출 여부 Y/N), 게임 결과, 서버 오류 로그를 보여줍니다. 참가자 목록은 20개씩 페이징됩니다.
-- **테스트 버튼**: `빠른 추가`(AI 없이 즉시 참가), `AI TEST`(임의 신원으로 실제 AI 호출), `DB TEST`(기존 신원으로 재사용 확인)
+- **참가자 등록 → AI 운세 → 상대평가 버프**: 이름 + 생년월일(선택)을 등록하면 Claude(Haiku 4.5)가 점수·행운의 숫자·메시지를 생성합니다. 처음엔 절대 점수로 시작 위치를 정했는데, 실제로 테스트해보니 점수가 60~70점대로 몰려서 버프 차이가 눈에 안 보이는 문제가 있었습니다. 그래서 "이번 판 최고점자 대비 몇 점 차이나는지"로 바꿔, 최대 10점(공 10개 높이) 이내에서 상대적으로 갈리도록 했습니다.
+- **같은 사람이면 AI를 다시 부르지 않음**: 이름+생년월일이 같으면 최초 1회만 Claude를 호출하고, 이후에는 DB에 저장된 결과를 재사용합니다. 관리자 화면에서 AI 호출 여부(Y/N)를 참가자별로 볼 수 있습니다.
+- **핀볼 게임**: Matter.js 갈톤보드 + 회전 막대 장애물, 선두 공을 따라가는 카메라. 벽 틈에 공이 끼는 문제, 좁은 화면에서 보드가 잘리는 문제 등은 실제 플레이·모바일 테스트로 찾아서 고쳤습니다(자세한 과정은 `devhelp/` 참고).
+- **관리자 화면**: 참가자 이력, 게임 결과, 서버 오류 로그 조회. 참가자 목록은 20개씩 페이징됩니다.
+- **테스트용 버튼**: 빠른 추가(AI 호출 없이 즉시 참가), AI TEST(임의 신원으로 실제 AI 호출), DB TEST(기존 신원 재등록으로 캐시 재사용 시연).
 
 ## 기술 스택
 
-| 영역       | 기술                                                                                 |
-| ---------- | ------------------------------------------------------------------------------------ |
-| 백엔드     | Java 17, Spring Boot 4, Gradle, H2(파일), Anthropic Java SDK                         |
-| 프론트엔드 | React 19 + TypeScript + Vite, Matter.js (기존 Vanilla JS 버전 `frontend/` 병행 유지) |
-| 배포       | Render(Docker) + Vercel                                                              |
+- 백엔드: Java 17, Spring Boot 4, Gradle, H2(파일), Anthropic Java SDK
+- 프론트엔드: React 19 + TypeScript + Vite, Matter.js (기존 Vanilla JS 버전 `frontend/`도 병행 유지)
+- 배포: Render(Docker) + Vercel
 
 ## 구조 특징
 
-- 교체 지점을 인터페이스로 분리했습니다: `FortuneService`(Mock → Claude로 실제 교체), `GameRepository`, `PlayerJpaRepository`, `MatterAdapter`.
-- 예외는 `GlobalExceptionHandler`가 모아 `/api/admin/logs`로 조회됩니다.
+- 처음에는 Vanilla JS(`frontend/`)로 만들었다가, 이후 React로 마이그레이션했습니다(`frontend-react/`). React를 배우면서 정리한 내용은 `devhelp/15`~`23`에 남겨뒀습니다.
+- `FortuneService`: 초기 개발 단계에서는 API 연동 없이 게임 로직·화면부터 만들기 위해 인터페이스로 분리하고 Mock 구현체(`MockFortuneGenerator`)로 먼저 뼈대를 갖췄습니다. 이후 실제 Claude API 연동(`ClaudeFortuneGenerator`)으로 교체했고, Mock 구현체는 API 호출 없이 로직만 검증하는 단위 테스트용으로 남겨뒀습니다.
+- 같은 이유로 `GameRepository`, `PlayerJpaRepository`, `MatterAdapter`도 인터페이스로 분리해, 구현체를 바꿔도 호출부 코드는 그대로 유지되도록 했습니다.
+- 오류 로그가 발생하면 `GlobalExceptionHandler`가 모아서 관리자 화면(`/api/admin/logs`)에서 바로 확인할 수 있도록 구현했습니다. 다만 지금은 인메모리 저장이라 서버가 재시작되면 기록이 사라져, DB 등으로 영속화하는 보완이 필요합니다.
 - 물리 엔진 코드는 React 밖에 두고, `PinballBoard`가 마운트·정리만 담당합니다.
+- 매번 Claude API를 부르면 토큰 비용이 계속 쌓입니다. 그래서 이름+생년월일을 키로 삼아 DB를 캐시처럼 쓰고, 같은 신원은 재호출 없이 이전 결과를 재사용합니다.
 
 ## 폴더
 
@@ -39,16 +38,24 @@ plan/            설계·계획 문서
 devhelp/         구현 과정과 트러블슈팅 기록
 ```
 
-## 로컬 실행
+로컬 개발 환경 준비 과정은 [`devhelp/01`](./devhelp/01_개발_환경_준비.md)에 정리해뒀습니다.
 
-```bash
-# 백엔드 (http://localhost:8080) — ANTHROPIC_API_KEY 환경변수 필요(없으면 생년월일 없는 참가자만 가능)
-cd backend && ./gradlew bootRun
+## 상태와 개선 예정
 
-# 프론트 (http://localhost:5173)
-cd frontend-react && npm install && npm run dev
-```
+배포된 라이브 URL(Render + Vercel) 기준으로 전체 흐름(등록 → AI 운세 → 게임 → 결과 → 관리자)을 직접 확인했습니다.
 
-## 상태
+**만난 문제와 해결**
+- 문제: Vercel에 올린 SPA를 `/admin`에서 새로고침하면 404. → 해결: `vercel.json`에 SPA rewrite 규칙 추가.
+- 문제: 좁은 화면(모바일)에서 핀볼 보드가 약 39% 잘림. → 해결: 실제 렌더링 폭 기준으로 `fitScale`을 계산해 카메라 변환에 반영.
+- 문제: 인증 없는 공개 서비스라 비용·보안 리스크가 있음. → 해결: H2 콘솔 비활성화, 입력 검증, XSS 방지, `/api/fortune` 요청 제한 적용.
+- 문제: 존재하지 않는 경로 요청까지 500으로 처리돼 관리자 오류 로그가 노이즈로 오염됨. → 해결: `NoResourceFoundException` 전용 처리 추가.
 
-백엔드(Render)와 프론트(Vercel)가 배포되어 있고, 전체 흐름(등록 → AI 운세 → 게임 → 결과 → 관리자)은 로컬에서 확인했습니다. 앞으로 할 일은 [`plan/05_improvement-backlog.md`](./plan/05_improvement-backlog.md)에 있습니다(관리자 인증, 로그·게임 결과 DB 저장, 모바일 화면 대응 등).
+자세한 과정은 [`devhelp/28`](./devhelp/28_배포_검증과_두_버그.md), [`devhelp/29`](./devhelp/29_비용과_보안_방어_Phase1.md) 참고.
+
+**진행 및 보완 예정**
+- 관리자 화면 인증 (지금은 URL만 알면 누구나 접근 가능)
+- 오류 로그·게임 결과 DB 영속화 (지금은 인메모리라 서버 재시작 시 유실)
+- H2 → PostgreSQL 등 실제 DB로 전환 (Render 재기동 시 초기화되는 문제 해결)
+- 모바일에서 운세 결과 카드 텍스트가 길면 잘리는 문제 보완
+
+자세한 계획은 [`plan/05_improvement-backlog.md`](./plan/05_improvement-backlog.md)에 정리해뒀습니다.
