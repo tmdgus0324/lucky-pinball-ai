@@ -16,5 +16,7 @@ spring:
     open-in-view: false
   h2:
     console:
-      enabled: true
+      # 공개 배포 상태라 기본값은 꺼둔다. 로컬에서 DB 내용을 보고 싶으면
+      # H2_CONSOLE_ENABLED=true 환경변수로 그때만 켠다.
+      enabled: ${H2_CONSOLE_ENABLED:false}
       path: /h2-console

@@ -1,10 +1,9 @@
 # 🎱 AI Lucky Pinball
 
-이름과 생년월일을 입력하면 AI(Claude)가 오늘의 운세를 분석해 시작 위치 버프를 주고, 참가자들이 물리 엔진 기반 핀볼 맵에서 결승선을 향해 경쟁합니다. 가장 마지막에 결승선을 통과한 사람이 당첨자가 되는 웹 추첨 게임입니다.
+이름과 생년월일을 입력하면 AI(Claude)가 오늘의 운세를 분석해 운세가 좋을 수록 높은 위치에서 시작할 수 있도록 합니다. 참가자들이 물리 엔진 기반 핀볼 맵에서 결승선을 향해 경쟁합니다. 가장 마지막에 결승선을 통과한 사람이 당첨자가 되는 웹 추첨 게임입니다.
 
-- 데모(프론트): https://lucky-pinball-ai.vercel.app
-- API(백엔드): https://lucky-pinball-backend.onrender.com
-- 백엔드가 무료 티어라 한동안 접속이 없으면 잠들고, 첫 요청은 30~60초 걸릴 수 있습니다. 이때 저장된 데이터도 초기화됩니다.
+- TEST URL : https://lucky-pinball-ai.vercel.app
+- 백엔드가 한동안 접속이 없으면 서버가 내려가고, 첫 요청은 30~60초 걸릴 수 있습니다. 이때 저장된 데이터도 초기화됩니다.
 
 ## 주요 기능
 
@@ -18,11 +17,11 @@
 
 ## 기술 스택
 
-| 영역 | 기술 |
-|---|---|
-| 백엔드 | Java 17, Spring Boot 4, Gradle, H2(파일), Anthropic Java SDK |
+| 영역       | 기술                                                                                 |
+| ---------- | ------------------------------------------------------------------------------------ |
+| 백엔드     | Java 17, Spring Boot 4, Gradle, H2(파일), Anthropic Java SDK                         |
 | 프론트엔드 | React 19 + TypeScript + Vite, Matter.js (기존 Vanilla JS 버전 `frontend/` 병행 유지) |
-| 배포 | Render(Docker) + Vercel |
+| 배포       | Render(Docker) + Vercel                                                              |
 
 ## 구조 특징
 

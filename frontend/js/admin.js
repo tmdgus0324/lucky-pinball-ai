@@ -8,6 +8,17 @@
   const overrideForm = document.getElementById('overrideForm');
   const overrideStatus = document.getElementById('overrideStatus');
 
+  // 참가자 이름·당첨자 이름은 사용자 입력이라, innerHTML 템플릿에 그대로 넣으면 태그를
+  // 심어 스크립트를 실행시킬 수 있다(XSS). 구조는 유지하고 이 값들만 이스케이프한다.
+  function escapeHtml(value) {
+    return String(value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
   async function loadPlayers() {
     try {
       const players = await api.adminGetPlayers();
@@ -20,7 +31,7 @@
           const history = player.fortuneHistory.length
             ? player.fortuneHistory.map((h) => `${h.createdDate} · ${h.fortuneScore}`).join(' &nbsp;→&nbsp; ')
             : '이력 없음';
-          return `<tr><td>${player.playerId}</td><td>${player.name}</td><td>${player.birthDate || '미입력'}</td><td>${history}</td></tr>`;
+          return `<tr><td>${player.playerId}</td><td>${escapeHtml(player.name)}</td><td>${player.birthDate || '미입력'}</td><td>${history}</td></tr>`;
         })
         .join('');
     } catch (error) {
@@ -38,7 +49,7 @@
       gamesBody.innerHTML = games
         .map(
           (game) =>
-            `<tr><td>${game.gameId}</td><td>${game.selectedName || '(진행 중)'}</td><td>${game.participantCount}</td><td>${game.createdAt}</td></tr>`
+            `<tr><td>${game.gameId}</td><td>${game.selectedName ? escapeHtml(game.selectedName) : '(진행 중)'}</td><td>${game.participantCount}</td><td>${game.createdAt}</td></tr>`
         )
         .join('');
     } catch (error) {
@@ -54,7 +65,10 @@
         return;
       }
       logList.innerHTML = logs
-        .map((log) => `<div class="log-item"><span class="path">${log.path}</span>${log.message} · ${log.timestamp}</div>`)
+        .map(
+          (log) =>
+            `<div class="log-item"><span class="path">${escapeHtml(log.path)}</span>${escapeHtml(log.message)} · ${log.timestamp}</div>`,
+        )
         .join('');
     } catch (error) {
       logList.innerHTML = `<div class="log-item">불러오기 실패: ${error.message}</div>`;

@@ -54,7 +54,8 @@
     state.players.forEach((player) => {
       const chip = document.createElement('span');
       chip.className = 'player-chip';
-      chip.innerHTML = `${player.name} · ${player.birthDate || '생년월일 미입력'} `;
+      // player.name은 사용자 입력이라 innerHTML 대신 textContent로 넣는다(XSS 방지).
+      chip.textContent = `${player.name} · ${player.birthDate || '생년월일 미입력'} `;
       const removeBtn = document.createElement('button');
       removeBtn.type = 'button';
       removeBtn.className = 'remove';
@@ -143,6 +144,17 @@
 
   const SOURCE_LABEL = { AI: 'AI 분석 (1회차)', CACHE: '이전 기록 재사용', NONE: '생년월일 미입력' };
 
+  // 참가자 이름·AI 메시지는 사용자/외부 입력이라, innerHTML 템플릿에 그대로 넣으면 태그를
+  // 심어 스크립트를 실행시킬 수 있다(XSS). innerHTML 구조는 유지하되 이 값들만 이스케이프한다.
+  function escapeHtml(value) {
+    return String(value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
   // 실제 게임 시작 시 서버(GameService.applyRelativeStartY)가 계산하는 것과 반드시 같은
   // 결과가 나와야 하므로, 두 상수는 backend/.../fortune/BuffCalculator.java와 항상
   // 일치시켜야 한다(devhelp/26 — frontend-react의 utils/relativeBuff.ts와 동일한 로직).
@@ -172,10 +184,10 @@
         fortune.source === 'NONE'
           ? `<div class="message">생년월일을 입력하지 않아 운세 없이 참여합니다</div>`
           : `<div class="score">${fortune.fortuneScore}<span style="font-size:12px;color:var(--muted)">점</span></div>
-             <div class="message">"${fortune.fortuneMessage}"</div>`;
+             <div class="message">"${escapeHtml(fortune.fortuneMessage)}"</div>`;
 
       card.innerHTML = `
-        <div class="name">${player ? player.name : fortune.playerId}</div>
+        <div class="name">${escapeHtml(player ? player.name : fortune.playerId)}</div>
         ${scoreBlock}
         <div class="stats"><span>${buffLabel}</span><span>시작 높이 +${displayStartY}</span><span>${sourceLabel}</span></div>
       `;
@@ -219,7 +231,7 @@
     els.resultSection.hidden = false;
     els.resultBanner.innerHTML = `
       <div class="bell">🔔</div>
-      <div class="selected-name">${result.selectedName} 님 당첨!</div>
+      <div class="selected-name">${escapeHtml(result.selectedName)} 님 당첨!</div>
       <div class="sub">참가자 ${result.participantCount}명 중 가장 마지막으로 결승선 통과 · 게임 ID: ${result.gameId}</div>
     `;
     els.resultSection.scrollIntoView({ behavior: 'smooth', block: 'start' });

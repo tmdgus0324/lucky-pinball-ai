@@ -2,6 +2,8 @@ package com.luckypinball.player;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Past;
+import jakarta.validation.constraints.Size;
 import java.time.LocalDate;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -26,8 +28,10 @@ public class PlayerController {
     }
 
     public record RegisterPlayerRequest(
-            @NotBlank String name,
-            LocalDate birthDate // 선택사항 — 없으면 버프 없이 참여(AI 호출 안 함)
+            // 길이 제한 없이 받으면 화면 레이아웃이 깨지고, Claude 프롬프트에도 그대로 들어간다.
+            @NotBlank @Size(max = 20) String name,
+            // 생년월일은 선택사항 — 없으면 버프 없이 참여(AI 호출 안 함). 입력하면 미래 날짜는 막는다.
+            @Past LocalDate birthDate
     ) {
     }
 

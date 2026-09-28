@@ -337,18 +337,28 @@ function renderRankPanel(rankListEl, finishedEntries, pendingNames) {
   rankListEl.innerHTML = '';
   const total = finishedEntries.length + pendingNames.size;
 
+  // 참가자 이름은 사용자가 입력한 값이라, innerHTML로 넣으면 이름에 태그를 넣어 스크립트를
+  // 실행시킬 수 있다(XSS). textContent/append는 항상 텍스트로만 취급해서 안전하다.
   finishedEntries.forEach((entry, index) => {
     const isLast = index === finishedEntries.length - 1 && pendingNames.size === 0;
     const item = document.createElement('div');
     item.className = 'rank-item' + (isLast ? ' selected' : '');
-    item.innerHTML = `<span class="position">${index + 1}</span> ${entry.name}`;
+    const position = document.createElement('span');
+    position.className = 'position';
+    position.textContent = String(index + 1);
+    item.appendChild(position);
+    item.append(' ' + entry.name);
     rankListEl.appendChild(item);
   });
 
   pendingNames.forEach((name) => {
     const item = document.createElement('div');
     item.className = 'rank-item pending';
-    item.innerHTML = `<span class="position">?</span> ${name} (진행 중)`;
+    const position = document.createElement('span');
+    position.className = 'position';
+    position.textContent = '?';
+    item.appendChild(position);
+    item.append(` ${name} (진행 중)`);
     rankListEl.appendChild(item);
   });
 
