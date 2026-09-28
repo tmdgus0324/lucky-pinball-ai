@@ -245,28 +245,48 @@ function spawnY(buffStartY: number): number {
  * 카메라(확대/이동) 연출을 위해 보드를 두 겹으로 나눈다:
  * boardEl(뷰포트, 크기 고정·overflow:hidden) 안에 sceneEl(실제 못/벽/공이 그려지는 레이어)을
  * 두고, sceneEl에만 scale/translate 변형을 걸어 "카메라"처럼 보이게 한다.
+ *
+ * fitScale: 모바일처럼 화면이 좁아서 CSS(`max-width:100%`)가 boardEl을 cfg.boardWidth보다
+ * 작게 강제로 줄이는 경우, 그 실제 렌더 폭에 맞춰 scene 전체를 같은 비율로 축소한다.
+ * 안 하면 scene은 여전히 560px 그대로라 overflow:hidden에 의해 오른쪽 절반 가까이가
+ * 통째로 잘려서 안 보이게 된다(실기기 테스트로 확인됨).
  */
-function createScene(boardEl: HTMLElement, cfg: MapConfig): HTMLDivElement {
+function createScene(boardEl: HTMLElement, cfg: MapConfig): { sceneEl: HTMLDivElement; fitScale: number } {
   boardEl.innerHTML = '';
   boardEl.style.width = cfg.boardWidth + 'px';
   boardEl.style.height = cfg.boardHeight + 'px';
+
+  const renderedWidth = boardEl.getBoundingClientRect().width;
+  const fitScale = renderedWidth > 0 ? Math.min(1, renderedWidth / cfg.boardWidth) : 1;
+  boardEl.style.height = cfg.boardHeight * fitScale + 'px';
 
   const sceneEl = document.createElement('div');
   sceneEl.className = 'pinball-scene';
   sceneEl.style.width = cfg.boardWidth + 'px';
   sceneEl.style.height = cfg.boardHeight + 'px';
   boardEl.appendChild(sceneEl);
-  return sceneEl;
+  return { sceneEl, fitScale };
 }
 
 /**
- * sceneEl을 (targetX, targetY)가 뷰포트 중앙에 오도록 scale배 확대한다.
- * scale=1, target=중앙이면 원래 상태(변형 없음)와 같다.
+ * sceneEl을 (targetX, targetY)가 뷰포트 중앙에 오도록 cameraScale배 확대한다.
+ * fitScale은 위 createScene에서 구한 "화면에 맞추기" 배율과 곱해져서 최종 배율이 된다 —
+ * cameraScale=1, fitScale=1, target=중앙이면 원래 상태(변형 없음)와 같다.
  */
-function applyCamera(sceneEl: HTMLElement, cfg: MapConfig, targetX: number, targetY: number, scale: number) {
-  const dx = cfg.boardWidth / 2 - targetX * scale;
-  const dy = cfg.boardHeight / 2 - targetY * scale;
-  sceneEl.style.transform = `translate(${dx}px, ${dy}px) scale(${scale})`;
+function applyCamera(
+  sceneEl: HTMLElement,
+  cfg: MapConfig,
+  targetX: number,
+  targetY: number,
+  cameraScale: number,
+  fitScale: number,
+) {
+  const totalScale = fitScale * cameraScale;
+  const viewportWidth = cfg.boardWidth * fitScale;
+  const viewportHeight = cfg.boardHeight * fitScale;
+  const dx = viewportWidth / 2 - targetX * totalScale;
+  const dy = viewportHeight / 2 - targetY * totalScale;
+  sceneEl.style.transform = `translate(${dx}px, ${dy}px) scale(${totalScale})`;
 }
 
 function renderStaticElements(sceneEl: HTMLElement, cfg: MapConfig) {
@@ -428,7 +448,7 @@ export function runPinballGame({ boardEl, rankListEl, participants, onComplete }
     if (disposed) return;
     adapter.setGravity(cfg.gravityScale);
 
-    const sceneEl = createScene(boardEl, cfg);
+    const { sceneEl, fitScale } = createScene(boardEl, cfg);
     const spinners = buildBoard(adapter, sceneEl, cfg);
 
     const ballStates: BallState[] = [];
@@ -453,7 +473,7 @@ export function runPinballGame({ boardEl, rankListEl, participants, onComplete }
     const finishOrder: number[] = [];
     const finishedEntries: FinishedEntry[] = [];
     renderRankPanel(rankListEl, finishedEntries, pendingNames);
-    applyCamera(sceneEl, cfg, cfg.boardWidth / 2, cfg.boardHeight / 2, 1);
+    applyCamera(sceneEl, cfg, cfg.boardWidth / 2, cfg.boardHeight / 2, 1, fitScale);
 
     adapter.run(() => {
       for (const spinner of spinners) {
@@ -501,9 +521,9 @@ export function runPinballGame({ boardEl, rankListEl, participants, onComplete }
       if (!allFinished) {
         const leading = unfinished.reduce((a, b) => (a.pos.y >= b.pos.y ? a : b));
         if (leading.pos.y >= cfg.zoomStartY) {
-          applyCamera(sceneEl, cfg, leading.pos.x, leading.pos.y, ZOOM_SCALE);
+          applyCamera(sceneEl, cfg, leading.pos.x, leading.pos.y, ZOOM_SCALE, fitScale);
         } else {
-          applyCamera(sceneEl, cfg, cfg.boardWidth / 2, cfg.boardHeight / 2, 1);
+          applyCamera(sceneEl, cfg, cfg.boardWidth / 2, cfg.boardHeight / 2, 1, fitScale);
         }
       }
 
