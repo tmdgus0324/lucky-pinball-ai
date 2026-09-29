@@ -88,12 +88,13 @@ export function RegistrationForm({ players, onRegistered, onQuickAdd, onRemove, 
     onClearAll(); // 반복 테스트로 참가자가 계속 쌓이지 않도록, 새로 채우기 전에 먼저 비운다.
     const added: Player[] = [];
     try {
-      const existing = await api.adminGetPlayers();
+      // 관리자 전용 /admin/players 대신 공개 엔드포인트를 쓴다 — 관리자 화면에 로그인이
+      // 생기면서, 로그인 안 한 일반 참가자도 쓰는 이 데모 기능까지 막히면 안 되기 때문
+      // (devhelp/32 참고). 출처(AI/CACHE)가 실제로 기록된 신원만 걸러주는 건 이미
+      // 서버(GET /api/players/reusable)가 해주므로, 여기서는 중복 제거만 한다.
+      const existing = await api.getReusablePlayers();
       const seen = new Set<string>();
       const candidates = existing.filter((p) => {
-        // 출처(AI/CACHE)가 실제로 기록된 신원만 — 캐시는 이름+생년월일 컬럼으로 조회하는데,
-        // 출처가 없는 옛 이력(Mock 시절)은 그 컬럼이 비어 있어 캐시에 안 걸리고 AI가 호출된다.
-        if (p.birthDate == null || p.fortuneSource == null) return false;
         const key = `${p.name}|${p.birthDate}`;
         if (seen.has(key)) return false;
         seen.add(key);

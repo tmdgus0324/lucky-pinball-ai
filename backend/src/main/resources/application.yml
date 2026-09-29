@@ -20,3 +20,9 @@ spring:
       # H2_CONSOLE_ENABLED=true 환경변수로 그때만 켠다.
       enabled: ${H2_CONSOLE_ENABLED:false}
       path: /h2-console
+
+admin:
+  username: ${ADMIN_USERNAME:admin}
+  # 기본값을 빈 문자열로 둔 이유: 비워두면 로그인이 항상 실패하게 만들어서(AdminAuthController
+  # 참고), 배포 환경에 ADMIN_PASSWORD를 깜빡 설정 안 했을 때 누구나 들어가지는 사고를 막는다.
+  password: ${ADMIN_PASSWORD:}

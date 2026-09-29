@@ -23,6 +23,10 @@ public class ApiException extends RuntimeException {
         return new ApiException(HttpStatus.CONFLICT, message);
     }
 
+    public static ApiException unauthorized(String message) {
+        return new ApiException(HttpStatus.UNAUTHORIZED, message);
+    }
+
     public static ApiException notImplemented(String message) {
         return new ApiException(HttpStatus.NOT_IMPLEMENTED, message);
     }

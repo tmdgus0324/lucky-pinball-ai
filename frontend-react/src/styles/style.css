@@ -145,6 +145,9 @@ section.panel .desc {
   margin: 0 0 16px;
   color: var(--muted);
   font-size: 13px;
+  /* word-break 기본값(normal)은 한글도 아무 글자 사이에서나 잘라버려서
+     "있습니다"가 "있"/"습니다"로 쪼개지는 식의 줄바꿈이 생긴다 — 어절 단위로만 줄바꿈되게 한다. */
+  word-break: keep-all;
 }
 
 .badge {
