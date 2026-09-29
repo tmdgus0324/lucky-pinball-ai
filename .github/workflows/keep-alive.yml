@@ -1,0 +1,20 @@
+name: Keep Backend Awake
+
+# Render 무료 티어는 일정 시간 요청이 없으면 슬립 상태가 되어 첫 요청에 30~60초가
+# 걸린다 — 면접/시연 시간대(평일 낮)에는 이 지연이 없도록 주기적으로 깨워둔다.
+# 굳이 24시간 내내 켜두지 않는 이유: Render 무료 티어의 월 가동시간 한도(약 750시간)를
+# 아끼기 위함 — 10~17시(하루 8시간) x 30일 = 약 240시간으로 한도 내에서 여유 있게 운용.
+#
+# 핑 대상(/api/players/reusable)은 로그인 없이 항상 200을 반환하는 공개 엔드포인트라
+# 별도 인증 없이 그냥 호출하면 된다(devhelp/33 참고).
+on:
+  schedule:
+    - cron: '*/10 1-8 * * *' # 10분마다, UTC 01:00~08:59 = 한국시간(KST) 10:00~17:59
+  workflow_dispatch: # 필요할 때 수동으로도 실행 가능
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping backend
+        run: curl -sf --max-time 60 https://lucky-pinball-backend.onrender.com/api/players/reusable || true
