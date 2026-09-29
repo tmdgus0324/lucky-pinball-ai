@@ -22,8 +22,8 @@ interface MapConfig {
   ballRadius: number;
   gravityScale: number;
   restitution: number;
-  /** 이 못 행(row index)은 못 대신 회전 핀휠 장애물로 대체한다. */
-  pinwheelRowIndex: number;
+  /** 이 못 행(row index) 목록은 못 대신 회전 핀휠 장애물로 대체한다. */
+  pinwheelRowIndices: number[];
   pinwheelBarLength: number;
   pinwheelBarThickness: number;
   /** 라디안/틱. 인접한 핀휠끼리는 부호를 번갈아 반대로 돈다(lazygyu/roulette 참고). */
@@ -50,7 +50,10 @@ const CLASSIC_GALTON_MAP: MapConfig = {
   ballRadius: 13,
   gravityScale: 0.4, // 기존(0.8) 대비 2배 느리게
   restitution: 0.45,
-  pinwheelRowIndex: 10,
+  // 기존 10행(중간) 한 줄 → 5행/15행 두 줄로 늘렸다가, 두 줄 사이(9행, 450px)가 여전히
+  // 완전히 뚫려있어서 4행 간격으로 균등하게 재배치했다 — 통로 전체에서 핀휠과 마주치는
+  // 간격을 일정하게 유지하기 위함 (devhelp/31 참고).
+  pinwheelRowIndices: [4, 8, 12, 16],
   pinwheelBarLength: 100,
   pinwheelBarThickness: 10,
   pinwheelAngularSpeed: 0.05,
@@ -81,6 +84,17 @@ const PEG_WALL_CLEARANCE = 70;
 // 올렸다 — 새 장애물을 추가하는 것보다 훨씬 낮은 리스크로 "벽을 따라 끝까지 미끄러지는"
 // 문제를 완화한다.
 const WALL_RESTITUTION = 0.7;
+
+// 위 PEG_WALL_CLEARANCE는 "고정된" 못 기준으로 검증된 값이라 그대로 둔다. 핀휠은 계속
+// 회전하는 장애물이라 같은 틈에서도 위치가 끊임없이 바뀌어서, 못처럼 좁은 틈에 공이 고정
+// 상태로 끼는 것과는 다른 상황일 가능성이 있다는 가설로 핀휠만 벽에 조금 더 가깝게
+// (70 → 50) 배치했다 — 8명 게임 10회 반복으로 안전함을 확인했다.
+//
+// 이후 "벽에 거의 붙을 정도로" 15까지 줄여봤지만, 5번 중 4번이 120초 안에 못 끝나고
+// 타임아웃됐다(정상은 15~20초) — 회전 장애물도 벽에 너무 가까우면 못과 똑같이 위험하다는
+// 뜻이다. "회전하니까 안전할 것"이라는 가설은 정도의 차이일 뿐 무한정 적용되지 않는다.
+// 그래서 검증된 50으로 되돌렸다(devhelp/31, 확인 방식은 devhelp/25와 동일).
+const PINWHEEL_WALL_CLEARANCE = 50;
 
 /** Matter.js를 감싸는 얇은 어댑터. 이 파일 밖에서는 Matter.* 를 직접 쓰지 않는다. */
 class MatterAdapter {
@@ -188,7 +202,7 @@ function buildPegPositions(cfg: MapConfig): { x: number; y: number }[] {
   const { rows, colSpacing, rowSpacing, startY } = cfg.pegField;
   const pegs: { x: number; y: number }[] = [];
   for (let row = 0; row < rows; row++) {
-    if (row === cfg.pinwheelRowIndex) continue; // 이 행은 못 대신 핀휠이 차지한다
+    if (cfg.pinwheelRowIndices.includes(row)) continue; // 이 행들은 못 대신 핀휠이 차지한다
     const y = startY + row * rowSpacing;
     const offset = row % 2 === 1 ? colSpacing / 2 : 0;
     const { left, right } = playableBoundsAtY(y, cfg);
@@ -206,18 +220,30 @@ interface PinwheelSpec {
 }
 
 function buildPinwheelPositions(cfg: MapConfig): PinwheelSpec[] {
-  const y = cfg.pegField.startY + cfg.pinwheelRowIndex * cfg.pegField.rowSpacing;
-  const { left, right } = playableBoundsAtY(y, cfg);
   const spacing = cfg.pegField.colSpacing * 2; // 못보다 큰 장애물이라 한 칸 건너 배치
-  const fieldLeft = left + PEG_WALL_CLEARANCE + cfg.pinwheelBarLength / 2;
-  const fieldRight = right - PEG_WALL_CLEARANCE - cfg.pinwheelBarLength / 2;
-
   const pinwheels: PinwheelSpec[] = [];
-  let index = 0;
-  for (let x = fieldLeft; x <= fieldRight; x += spacing, index++) {
-    const angularSpeed = index % 2 === 0 ? cfg.pinwheelAngularSpeed : -cfg.pinwheelAngularSpeed;
-    pinwheels.push({ x, y, angularSpeed });
-  }
+
+  cfg.pinwheelRowIndices.forEach((rowIndex) => {
+    const y = cfg.pegField.startY + rowIndex * cfg.pegField.rowSpacing;
+    const { left, right } = playableBoundsAtY(y, cfg);
+    const fieldLeft = left + PINWHEEL_WALL_CLEARANCE + cfg.pinwheelBarLength / 2;
+    const fieldRight = right - PINWHEEL_WALL_CLEARANCE - cfg.pinwheelBarLength / 2;
+    const usable = fieldRight - fieldLeft;
+
+    // 왼쪽부터 그리디하게 채우면 spacing으로 안 나눠떨어지는 나머지가 전부 오른쪽에
+    // 몰려서 좌우가 비대칭으로 보인다 — 실제로 들어갈 개수를 먼저 구하고, 그 묶음
+    // 전체를 fieldLeft~fieldRight 가운데에 정렬한다.
+    const count = Math.max(1, Math.floor(usable / spacing) + 1);
+    const totalSpan = (count - 1) * spacing;
+    const startX = fieldLeft + (usable - totalSpan) / 2;
+
+    for (let i = 0; i < count; i++) {
+      const x = startX + i * spacing;
+      const angularSpeed = i % 2 === 0 ? cfg.pinwheelAngularSpeed : -cfg.pinwheelAngularSpeed;
+      pinwheels.push({ x, y, angularSpeed });
+    }
+  });
+
   return pinwheels;
 }
 

@@ -13,6 +13,8 @@ import com.luckypinball.common.ApiException;
 import java.time.LocalDate;
 import java.time.format.TextStyle;
 import java.util.Locale;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 
 /**
@@ -60,6 +62,22 @@ public class ClaudeFortuneGenerator implements FortuneService {
             }
         }
         return client;
+    }
+
+    /**
+     * 서버가 완전히 뜬 직후에 클라이언트(OkHttp 커넥션 풀 등)를 미리 만들어둔다 — Anthropic에
+     * 실제 요청을 보내는 게 아니라 로컬에서 통신 준비만 해두는 것이라 토큰 비용은 전혀 없다.
+     * 이렇게 안 하면 이 비용이 배포 후 첫 실제 사용자의 첫 운세 요청에 고스란히 붙는다.
+     * 키가 없으면 조용히 넘어가고(로그만 남김), 실제 요청 시점에 client()가 같은 안내 메시지로
+     * 다시 실패한다 — 키 없이도 서버가 정상적으로 뜬다는 기존 동작은 그대로 유지한다.
+     */
+    @EventListener(ApplicationReadyEvent.class)
+    public void warmUpClient() {
+        try {
+            client();
+        } catch (ApiException e) {
+            // ANTHROPIC_API_KEY 미설정 — 로컬 개발 등에서는 정상적인 상황이라 별도 처리 없이 넘어간다.
+        }
     }
 
     @Override
