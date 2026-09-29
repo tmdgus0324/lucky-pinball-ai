@@ -17,7 +17,7 @@ class RateLimitFilterTest {
 
         for (int i = 1; i <= 20; i++) {
             MockHttpServletResponse response = doFortuneRequest(filter, noop, "203.0.113.1");
-            assertEquals(999, response.getStatus(), "요청 " + i + "번째는 통과해야 한다");
+            assertEquals(200, response.getStatus(), "요청 " + i + "번째는 통과해야 한다");
         }
 
         MockHttpServletResponse blocked = doFortuneRequest(filter, noop, "203.0.113.1");
