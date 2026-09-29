@@ -95,10 +95,6 @@ export function GamePage() {
 
   return (
     <>
-      <header className="top">
-        <h2>참가자 / 게임 화면</h2>
-      </header>
-
       <RegistrationForm
         players={players}
         onRegistered={handleRegistered}
