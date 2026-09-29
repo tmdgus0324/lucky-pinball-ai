@@ -11,3 +11,6 @@ dist/
 
 # Claude Code 개인 설정
 .claude/settings.local.json
+
+# devhelp/00_*.md는 커밋하지 않는 개인 작업 메모 규칙 (로드맵, 면접 준비 등)
+devhelp/00_*.md
