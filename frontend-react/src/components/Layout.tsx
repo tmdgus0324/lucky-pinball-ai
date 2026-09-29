@@ -14,7 +14,7 @@ export function Layout() {
         </div>
         <nav className="tabs">
           <NavLink to="/" end className={({ isActive }) => (isActive ? 'active' : '')}>
-            참가자 / 게임 화면
+            게임하기
           </NavLink>
           <NavLink to="/admin" className={({ isActive }) => (isActive ? 'active' : '')}>
             관리자 화면
