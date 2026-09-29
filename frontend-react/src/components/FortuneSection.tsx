@@ -1,12 +1,13 @@
 import { useMemo, useState } from 'react';
-import { api, type FortuneResponse, type FortuneSource, type Player } from '../api/client';
-import { computeRelativeStartY } from '../utils/relativeBuff';
+import { api, type FortuneResponse, type Player } from '../api/client';
+import { computeRelativeGap } from '../utils/relativeBuff';
 
-const SOURCE_LABEL: Record<FortuneSource, string> = {
-  AI: 'AI 분석 (1회차)',
-  CACHE: '이전 기록 재사용',
-  NONE: '생년월일 미입력',
-};
+/** "3칸 아래에서 출발" 같은 한 줄 요약. 버프 티어·AI/캐시 출처 같은 내부 정보는 참가자
+ * 화면에서는 빼고(관리자 화면의 "AI 호출 Y/N" 컬럼에 그대로 남아있다), 실제로 어디서
+ * 출발하는지만 바로 이해되게 한다. */
+function describeStart(gap: number): string {
+  return gap === 0 ? '가장 높은 곳에서 출발!' : `${gap}칸 아래에서 출발`;
+}
 
 interface FortuneSectionProps {
   players: Player[];
@@ -75,13 +76,8 @@ export function FortuneSection({ players, quickAddIds, onFortunesReady }: Fortun
 
   return (
     <section className="panel">
-      <h2>2. 오늘의 운세 &amp; 버프</h2>
-      <p className="desc">
-        버프는 <strong>시작 높이</strong> 한 가지만 차등을 둡니다 — 운세가 좋을수록 결승선에서 먼 곳(위)에서, 운세가
-        안 좋을수록 결승선에 가까운 곳(아래)에서 출발합니다. 점수는 절대값이 아니라{' '}
-        <strong>이번에 등록된 참가자들 중 최고점자 대비 상대 순위</strong>로 반영되며(최대 공 10개 차이), 참가자
-        구성이 바뀌면 다시 "운세 확인"을 눌러야 합니다.
-      </p>
+      <h2>2. 오늘의 운세 — 좋을수록 더 높은 곳에서 출발!</h2>
+      <p className="desc">운세가 좋을수록 더 높은 곳에서, 안 좋을수록 결승선 가까이에서 출발합니다.</p>
 
       <div className="actions-row">
         <button type="button" disabled={!canCheck || checking} onClick={handleCheckFortune}>
@@ -99,14 +95,12 @@ export function FortuneSection({ players, quickAddIds, onFortunesReady }: Fortun
           ))}
         {results.map((fortune) => {
           const player = players.find((p) => p.playerId === fortune.playerId);
-          const buffLabel = fortune.buff.tier === 0 ? '버프 없음' : `버프 ${fortune.buff.tier}`;
-          const sourceLabel = SOURCE_LABEL[fortune.source] ?? fortune.source;
-          // NONE(생년월일 미입력)은 원래 버프가 0이라 그대로 두고, 실제 점수가 있는 참가자만
-          // "이번에 등록된 사람들 중 최고점자 대비 몇 점 차이인지"로 다시 계산해서 보여준다.
-          const displayStartY =
+          // 참가자에게는 "몇 칸 차이로 어디서 출발하는지"만 한 줄로 보여준다 — 버프 티어
+          // 숫자나 AI/캐시 출처 같은 내부 정보는 뺐다(관리자 화면 "AI 호출 Y/N"에 남아있음).
+          const startLine =
             fortune.source === 'NONE' || fortune.fortuneScore == null
-              ? fortune.buff.startY
-              : computeRelativeStartY(fortune.fortuneScore, maxScoreInGroup);
+              ? null
+              : describeStart(computeRelativeGap(fortune.fortuneScore, maxScoreInGroup));
           return (
             <div className={`fortune-card tier-${fortune.buff.tier}`} key={fortune.playerId}>
               <div className="name">{player ? player.name : fortune.playerId}</div>
@@ -121,11 +115,7 @@ export function FortuneSection({ players, quickAddIds, onFortunesReady }: Fortun
                   <div className="message">"{fortune.fortuneMessage}"</div>
                 </>
               )}
-              <div className="stats">
-                <span>{buffLabel}</span>
-                <span>시작 높이 +{displayStartY}</span>
-                <span>{sourceLabel}</span>
-              </div>
+              {startLine && <div className="start-line">{startLine}</div>}
             </div>
           );
         })}

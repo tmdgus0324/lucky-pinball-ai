@@ -41,6 +41,18 @@ export function GamePage() {
     setFortunesReady(false);
   }
 
+  // 참가자 전체를 비운다 — 사람이 직접 "전체 초기화"를 눌렀을 때, 그리고 AI TEST/DB TEST가
+  // 반복 테스트로 참가자가 계속 쌓이는 걸 막기 위해 새로 채우기 전에 먼저 호출한다.
+  // 진행 중이던 게임/결과도 같이 지워서 화면을 처음 상태로 되돌린다.
+  function handleClearAll() {
+    setPlayers([]);
+    setHiddenScores(new Map());
+    setFortunesReady(false);
+    setGame(null);
+    setResult(null);
+    setGameStatus({ text: '', error: false });
+  }
+
   async function handleStartGame() {
     setStarting(true);
     setResult(null);
@@ -92,6 +104,7 @@ export function GamePage() {
         onRegistered={handleRegistered}
         onQuickAdd={handleQuickAdd}
         onRemove={handleRemove}
+        onClearAll={handleClearAll}
       />
 
       <FortuneSection
@@ -101,13 +114,8 @@ export function GamePage() {
       />
 
       <section className="panel">
-        <h2>
-          3. 게임 진행 — 핀볼 맵 <span className="badge">클래식 갈톤보드</span>
-        </h2>
-        <p className="desc">
-          갈톤보드/플린코 스타일의 못(peg) 배열을 통과해 <strong>결승선을 먼저 통과하는 순서</strong>로 순위가
-          정해집니다. 가장 마지막에 결승선을 통과한 참가자가 "당첨자"가 됩니다.
-        </p>
+        <h2>3. 게임 진행 — 가장 늦게 도착한 사람이 당첨!</h2>
+        <p className="desc">아래 맵을 굴러 내려가 결승선에 가장 마지막에 도착한 참가자가 당첨자입니다.</p>
 
         <div className="actions-row">
           <button type="button" disabled={!fortunesReady || starting} onClick={handleStartGame}>
@@ -116,7 +124,11 @@ export function GamePage() {
         </div>
         <p className={`status-text${gameStatus.error ? ' error' : ''}`}>{gameStatus.text}</p>
 
-        {game && <PinballBoard key={game.gameId} participants={game.participants} onComplete={handleGameComplete} />}
+        <PinballBoard
+          key={game ? game.gameId : 'preview'}
+          participants={game ? game.participants : []}
+          onComplete={handleGameComplete}
+        />
       </section>
 
       {result && <ResultBanner result={result} />}

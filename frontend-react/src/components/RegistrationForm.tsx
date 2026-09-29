@@ -3,14 +3,17 @@ import { api, type Player } from '../api/client';
 import { parseBirthDateShorthand } from '../utils/birthDate';
 import { randomBirthDateIso, randomKoreanName } from '../utils/aiTest';
 
+const MAX_PLAYERS = 8;
+
 interface RegistrationFormProps {
   players: Player[];
   onRegistered: (player: Player) => void;
   onQuickAdd: (players: Player[]) => void;
   onRemove: (playerId: number) => void;
+  onClearAll: () => void;
 }
 
-export function RegistrationForm({ players, onRegistered, onQuickAdd, onRemove }: RegistrationFormProps) {
+export function RegistrationForm({ players, onRegistered, onQuickAdd, onRemove, onClearAll }: RegistrationFormProps) {
   const [name, setName] = useState('');
   const [birthInput, setBirthInput] = useState('');
   const [status, setStatus] = useState<{ text: string; error: boolean }>({ text: '', error: false });
@@ -53,7 +56,9 @@ export function RegistrationForm({ players, onRegistered, onQuickAdd, onRemove }
   async function handleAiTest() {
     setAiTesting(true);
     setStatus({ text: '', error: false });
-    const count = Math.min(quickCount, remainingSlots);
+    onClearAll(); // 반복 테스트로 참가자가 계속 쌓이지 않도록, 새로 채우기 전에 먼저 비운다.
+    // remainingSlots는 초기화 전 인원 기준이라, 초기화 후 실제로 채울 수 있는 자리(최대 8)로 다시 계산한다.
+    const count = Math.min(quickCount, MAX_PLAYERS);
     const added: Player[] = [];
     try {
       for (let i = 0; i < count; i++) {
@@ -62,7 +67,7 @@ export function RegistrationForm({ players, onRegistered, onQuickAdd, onRemove }
         added.push(player);
       }
       added.forEach(onRegistered);
-      setStatus({ text: `${players.length + added.length}/8명 등록됨 (AI TEST)`, error: false });
+      setStatus({ text: `${added.length}/8명 등록됨 (AI TEST)`, error: false });
     } catch (error) {
       setStatus({ text: `AI TEST 등록 실패: ${(error as Error).message}`, error: true });
       added.forEach(onRegistered); // 일부라도 성공한 만큼은 반영
@@ -80,17 +85,17 @@ export function RegistrationForm({ players, onRegistered, onQuickAdd, onRemove }
   async function handleDbTest() {
     setDbTesting(true);
     setStatus({ text: '', error: false });
+    onClearAll(); // 반복 테스트로 참가자가 계속 쌓이지 않도록, 새로 채우기 전에 먼저 비운다.
     const added: Player[] = [];
     try {
       const existing = await api.adminGetPlayers();
-      const usedNames = new Set(players.map((p) => p.name));
       const seen = new Set<string>();
       const candidates = existing.filter((p) => {
         // 출처(AI/CACHE)가 실제로 기록된 신원만 — 캐시는 이름+생년월일 컬럼으로 조회하는데,
         // 출처가 없는 옛 이력(Mock 시절)은 그 컬럼이 비어 있어 캐시에 안 걸리고 AI가 호출된다.
         if (p.birthDate == null || p.fortuneSource == null) return false;
         const key = `${p.name}|${p.birthDate}`;
-        if (seen.has(key) || usedNames.has(p.name)) return false;
+        if (seen.has(key)) return false;
         seen.add(key);
         return true;
       });
@@ -104,16 +109,17 @@ export function RegistrationForm({ players, onRegistered, onQuickAdd, onRemove }
       }
 
       // Fisher-Yates가 아니어도 되는 규모라 정렬 기반으로 간단히 섞는다.
-      const picked = [...candidates].sort(() => Math.random() - 0.5).slice(0, Math.min(quickCount, remainingSlots));
+      // 초기화 후 실제로 채울 수 있는 자리(최대 8)로 뽑는다 — remainingSlots는 초기화 전 기준이라 못 쓴다.
+      const picked = [...candidates].sort(() => Math.random() - 0.5).slice(0, Math.min(quickCount, MAX_PLAYERS));
       for (const c of picked) {
         // eslint-disable-next-line no-await-in-loop
         added.push(await api.registerPlayer(c.name, c.birthDate));
       }
       added.forEach(onRegistered);
-      const shortfall = Math.min(quickCount, remainingSlots) - added.length;
+      const shortfall = Math.min(quickCount, MAX_PLAYERS) - added.length;
       setStatus({
         text:
-          `${players.length + added.length}/8명 등록됨 (DB TEST)` +
+          `${added.length}/8명 등록됨 (DB TEST)` +
           (shortfall > 0 ? ` — 재사용 가능한 기존 참가자가 ${added.length}명뿐이라 그만큼만 등록했습니다.` : ''),
         error: false,
       });
@@ -165,20 +171,21 @@ export function RegistrationForm({ players, onRegistered, onQuickAdd, onRemove }
         1. 참가자 등록 <span className="badge">최대 8명</span>
       </h2>
       <p className="desc">
-        이름(또는 별칭)을 입력해 참가자를 등록합니다. 생년월일은 <strong>선택사항</strong>이며{' '}
-        <strong>6자리 숫자</strong>로 입력합니다(예: <code>880324</code> → 1988-03-24, <code>130101</code> → 2013-01-01).
-        입력하면 AI가 오늘의 운세를 분석해 버프를 부여하고, 비워두면 AI 호출 없이 버프 없는 상태로 바로 참여합니다.
+        이름 + 생년월일 6자리(선택, 예: <code>880324</code>)를 입력하세요 — 입력하면 AI 운세로 버프가, 비우면 버프
+        없이 바로 참여합니다.
       </p>
 
       <form className="reg-form" onSubmit={handleSubmit}>
         <span className="quick-add-inline">
           <select
-            value={Math.min(quickCount, Math.max(remainingSlots, 1))}
+            value={quickCount}
             onChange={(e) => setQuickCount(Number(e.target.value))}
-            disabled={remainingSlots <= 0}
-            title="빠른 추가/AI TEST에 쓸 인원수"
+            disabled={busy}
+            title="빠른 추가/AI TEST/DB TEST에 쓸 인원수"
           >
-            {Array.from({ length: Math.max(remainingSlots, 1) }, (_, i) => i + 1).map((n) => (
+            {/* AI TEST·DB TEST는 선택 시 기존 참가자를 비우고 새로 채우므로 항상 8명까지 고를 수 있다.
+                "빠른 추가"만 남은 자리(remainingSlots) 이상을 고르면 그 자리만큼만 채워진다. */}
+            {Array.from({ length: MAX_PLAYERS }, (_, i) => i + 1).map((n) => (
               <option key={n} value={n}>
                 {n}명
               </option>
@@ -214,20 +221,16 @@ export function RegistrationForm({ players, onRegistered, onQuickAdd, onRemove }
         <button type="submit" disabled={busy}>
           참가자 등록
         </button>
-        <button type="button" className="secondary" disabled={remainingSlots <= 0 || busy} onClick={handleAiTest}>
+        <button type="button" className="secondary" disabled={busy} onClick={handleAiTest}>
           AI TEST
         </button>
-        <button type="button" className="secondary" disabled={remainingSlots <= 0 || busy} onClick={handleDbTest}>
+        <button type="button" className="secondary" disabled={busy} onClick={handleDbTest}>
           DB TEST
         </button>
       </form>
       <p className="desc" style={{ marginTop: 6 }}>
-        "빠른 추가"로 참여한 참가자는 이름/생년월일 입력과 AI 운세 호출 없이 즉시 참여합니다 — 대신 무작위로
-        시작 높이가 정해지며, 그 값은 공개되지 않고 게임에서 높이 차이로만 드러납니다. <strong>"AI TEST"</strong>는
-        반대로 임의의 한글 이름 + 생년월일로 <strong>실제 AI 호출·캐시 재사용 흐름을 그대로</strong> 시연해보고
-        싶을 때 씁니다(선택한 인원수만큼 즉시 등록, 운세 확인을 눌러야 실제 호출이 일어남). <strong>"DB TEST"</strong>는
-        이미 운세 결과가 DB에 있는 기존 참가자(이름+생년월일)를 다시 등록해서, AI 호출 없이{' '}
-        <strong>기존 데이터를 재사용</strong>하는 2회차 흐름을 시연합니다.
+        <strong>빠른 추가</strong>=운세 없이 즉시 참여 · <strong>AI TEST</strong>=임의 신원으로 실제 AI 호출 시연 ·{' '}
+        <strong>DB TEST</strong>=기존 신원 재등록으로 캐시 재사용 시연
       </p>
 
       <div className="player-list">
@@ -240,7 +243,14 @@ export function RegistrationForm({ players, onRegistered, onQuickAdd, onRemove }
           </span>
         ))}
       </div>
-      <p className={`status-text${status.error ? ' error' : ''}`}>{status.text || `${players.length}/8명 등록됨`}</p>
+      <div className="actions-row" style={{ marginTop: 6 }}>
+        <p className={`status-text${status.error ? ' error' : ''}`} style={{ margin: 0 }}>
+          {status.text || `${players.length}/8명 등록됨`}
+        </p>
+        <button type="button" className="secondary" disabled={players.length === 0 || busy} onClick={onClearAll}>
+          전체 초기화
+        </button>
+      </div>
     </section>
   );
 }

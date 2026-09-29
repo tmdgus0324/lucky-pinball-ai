@@ -11,7 +11,11 @@
 const RELATIVE_GAP_CAP = 10;
 const BALL_DIAMETER_PX = 26;
 
+/** 최고점자와의 점수 차이를 "칸"(공 한 개 크기) 단위로 환산한다. 0이면 최고점자와 동률. */
+export function computeRelativeGap(myScore: number, maxScoreInGroup: number): number {
+  return Math.min(RELATIVE_GAP_CAP, Math.max(0, maxScoreInGroup - myScore));
+}
+
 export function computeRelativeStartY(myScore: number, maxScoreInGroup: number): number {
-  const gap = Math.min(RELATIVE_GAP_CAP, Math.max(0, maxScoreInGroup - myScore));
-  return gap * BALL_DIAMETER_PX;
+  return computeRelativeGap(myScore, maxScoreInGroup) * BALL_DIAMETER_PX;
 }

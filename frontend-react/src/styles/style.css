@@ -293,18 +293,15 @@ button:disabled {
   margin: 6px 0 10px;
 }
 
-.fortune-card .stats {
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
-  font-size: 11px;
-  color: var(--muted);
-}
-
-.fortune-card .stats span {
+.fortune-card .start-line {
+  display: inline-block;
+  margin-top: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--tier-color, var(--muted));
   background: rgba(255,255,255,0.04);
   border-radius: 6px;
-  padding: 2px 6px;
+  padding: 3px 8px;
 }
 
 .tier-0 { --tier-color: #6b7280; }

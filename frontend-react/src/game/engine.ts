@@ -537,7 +537,10 @@ export function runPinballGame({ boardEl, rankListEl, participants, onComplete }
         }
       }
 
-      if (allFinished) {
+      // 게임 시작 전 "빈 맵 미리보기"(참가자 0명)에서는 공이 하나도 없어서 allFinished가
+      // 초기값 true 그대로 유지된다 — 그걸 "전원 완주"로 오판해 즉시 onComplete가 불려버리는
+      // 걸 막는다. 공이 1개 이상 있을 때만 완료 판정한다.
+      if (allFinished && ballStates.length > 0) {
         adapter.dispose();
         onComplete(finishOrder);
       }
