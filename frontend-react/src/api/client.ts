@@ -39,6 +39,17 @@ export class ApiError extends Error {
   }
 }
 
+/**
+ * 관리자 화면 컴포넌트들이 401을 받았을 때 "그냥 에러 문구"가 아니라 "로그인 화면으로
+ * 돌아가야 한다"고 판단하는 데 쓴다. AdminSessionStore가 인메모리라 서버가 재시작되면
+ * (슬립→깨어남 포함) 토큰이 서버 쪽에서만 초기화되는데, 브라우저는 예전 토큰을 계속
+ * 들고 있어서 "로그인된 화면"처럼 보이면서 실제 조회는 다 실패하는 문제가 있었다
+ * (devhelp/34).
+ */
+export function isUnauthorizedError(error: unknown): boolean {
+  return error instanceof ApiError && error.status === 401;
+}
+
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const token = getAdminToken();
   const response = await fetch(API_BASE + path, {

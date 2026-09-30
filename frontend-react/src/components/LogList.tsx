@@ -1,7 +1,12 @@
 import { useEffect, useState } from 'react';
-import { api, type AdminLog } from '../api/client';
+import { api, isUnauthorizedError, type AdminLog } from '../api/client';
 
-export function LogList({ reloadKey }: { reloadKey: number }) {
+interface LogListProps {
+  reloadKey: number;
+  onUnauthorized: () => void;
+}
+
+export function LogList({ reloadKey, onUnauthorized }: LogListProps) {
   const [logs, setLogs] = useState<AdminLog[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -9,7 +14,14 @@ export function LogList({ reloadKey }: { reloadKey: number }) {
     api
       .adminGetLogs()
       .then(setLogs)
-      .catch((err: Error) => setError(err.message));
+      .catch((err: Error) => {
+        if (isUnauthorizedError(err)) {
+          onUnauthorized();
+          return;
+        }
+        setError(err.message);
+      });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [reloadKey]);
 
   return (

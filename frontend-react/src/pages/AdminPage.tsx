@@ -19,6 +19,14 @@ export function AdminPage() {
     setLoggedIn(false);
   }
 
+  // 조회 중 하나라도 401을 받으면(서버 재시작 등으로 토큰이 만료된 경우) 로그인 화면으로
+  // 돌려보낸다 — 안 그러면 "로그인된 화면인데 전부 불러오기 실패"인 채로 멈춰있게 된다
+  // (devhelp/34에서 실제로 겪은 문제).
+  function handleUnauthorized() {
+    void api.adminLogout(); // 서버 호출은 실패해도 상관없다 — 로컬 토큰만 확실히 지운다.
+    setLoggedIn(false);
+  }
+
   return (
     <>
       <header className="top">
@@ -31,9 +39,9 @@ export function AdminPage() {
         </div>
       </header>
 
-      <PlayersTable />
-      <GamesTable />
-      <LogList reloadKey={logReloadKey} />
+      <PlayersTable onUnauthorized={handleUnauthorized} />
+      <GamesTable onUnauthorized={handleUnauthorized} />
+      <LogList reloadKey={logReloadKey} onUnauthorized={handleUnauthorized} />
       <OverrideForm onLogged={() => setLogReloadKey((k) => k + 1)} />
     </>
   );

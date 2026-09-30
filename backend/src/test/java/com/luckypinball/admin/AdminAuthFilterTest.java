@@ -89,6 +89,24 @@ class AdminAuthFilterTest {
     }
 
     @Test
+    void the401ResponseIncludesCorsHeaderForAllowedOrigin() throws Exception {
+        // 이 401은 DispatcherServlet까지 안 가서 WebConfig의 CORS 설정이 안 먹는다 — 직접
+        // 헤더를 안 붙이면 브라우저가 401을 읽지 못하고 "Failed to fetch"로 뭉개버린다
+        // (실제로 배포 환경에서 겪은 버그, devhelp/34).
+        AdminSessionStore store = new AdminSessionStore();
+        AdminAuthFilter filter = new AdminAuthFilter(store);
+
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/admin/players");
+        request.addHeader("Origin", "https://lucky-pinball-ai.vercel.app");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        filter.doFilter(request, response, noop);
+
+        assertEquals(401, response.getStatus());
+        assertEquals("https://lucky-pinball-ai.vercel.app", response.getHeader("Access-Control-Allow-Origin"));
+    }
+
+    @Test
     void nonAdminPathIsNeverBlocked() throws Exception {
         AdminSessionStore store = new AdminSessionStore();
         AdminAuthFilter filter = new AdminAuthFilter(store);

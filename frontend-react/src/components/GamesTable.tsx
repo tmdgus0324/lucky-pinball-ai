@@ -1,7 +1,11 @@
 import { useEffect, useState } from 'react';
-import { api, type AdminGame } from '../api/client';
+import { api, isUnauthorizedError, type AdminGame } from '../api/client';
 
-export function GamesTable() {
+interface GamesTableProps {
+  onUnauthorized: () => void;
+}
+
+export function GamesTable({ onUnauthorized }: GamesTableProps) {
   const [games, setGames] = useState<AdminGame[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -9,7 +13,14 @@ export function GamesTable() {
     api
       .adminGetGames()
       .then(setGames)
-      .catch((err: Error) => setError(err.message));
+      .catch((err: Error) => {
+        if (isUnauthorizedError(err)) {
+          onUnauthorized();
+          return;
+        }
+        setError(err.message);
+      });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (

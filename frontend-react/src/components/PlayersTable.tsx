@@ -1,10 +1,15 @@
 import { useEffect, useMemo, useState } from 'react';
-import { api, type AdminPlayer } from '../api/client';
+import { api, isUnauthorizedError, type AdminPlayer } from '../api/client';
 import { Pagination } from './Pagination';
 
 const PAGE_SIZE = 20;
 
-export function PlayersTable() {
+interface PlayersTableProps {
+  /** 401(로그인 만료/무효)을 받으면 로그인 화면으로 돌려보내는 콜백. */
+  onUnauthorized: () => void;
+}
+
+export function PlayersTable({ onUnauthorized }: PlayersTableProps) {
   const [players, setPlayers] = useState<AdminPlayer[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
@@ -13,7 +18,14 @@ export function PlayersTable() {
     api
       .adminGetPlayers()
       .then(setPlayers)
-      .catch((err: Error) => setError(err.message));
+      .catch((err: Error) => {
+        if (isUnauthorizedError(err)) {
+          onUnauthorized();
+          return;
+        }
+        setError(err.message);
+      });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const totalPages = useMemo(

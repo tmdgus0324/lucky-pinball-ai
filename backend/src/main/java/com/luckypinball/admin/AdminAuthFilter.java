@@ -1,5 +1,6 @@
 package com.luckypinball.admin;
 
+import com.luckypinball.common.CorsSupport;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -49,6 +50,10 @@ public class AdminAuthFilter extends OncePerRequestFilter {
 
         String token = extractToken(request.getHeader("Authorization"));
         if (!sessionStore.isValid(token)) {
+            // 이 응답은 DispatcherServlet까지 안 가서 WebConfig의 CORS 설정이 안 먹는다 —
+            // 직접 CORS 헤더를 안 붙이면 브라우저가 401을 "Failed to fetch"로 뭉개버린다
+            // (devhelp/34에서 실제로 겪은 버그).
+            CorsSupport.applyCorsHeaders(request, response);
             response.setStatus(HttpStatus.UNAUTHORIZED.value());
             response.setContentType("application/json;charset=UTF-8");
             response.getWriter().write("{\"error\":\"로그인이 필요합니다.\"}");
