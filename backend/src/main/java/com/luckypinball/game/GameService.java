@@ -74,7 +74,7 @@ public class GameService {
     public GameSession start(String gameId) {
         GameSession session = getSessionOrThrow(gameId);
         session.start();
-        return session;
+        return gameRepository.save(session);
     }
 
     public GameResultView reportResult(String gameId, List<Long> finishOrder) {
@@ -104,6 +104,7 @@ public class GameService {
 
         String selectedName = namesByPlayerId.get(finishOrder.get(finishOrder.size() - 1));
         session.reportResult(ranking, selectedName);
+        session = gameRepository.save(session);
 
         return toView(session);
     }
