@@ -24,6 +24,9 @@ dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-webmvc'
 	implementation 'com.anthropic:anthropic-java:2.34.0'
 	runtimeOnly 'com.h2database:h2'
+	// 로컬은 H2 그대로 쓰고, 배포(Render) 환경에서는 SPRING_DATASOURCE_URL 등 환경변수로
+	// Neon(Postgres)을 가리키게 전환한다 — 드라이버만 클래스패스에 있으면 된다.
+	runtimeOnly 'org.postgresql:postgresql'
 	testImplementation 'org.springframework.boot:spring-boot-starter-data-jpa-test'
 	testImplementation 'org.springframework.boot:spring-boot-starter-validation-test'
 	testImplementation 'org.springframework.boot:spring-boot-starter-webmvc-test'

@@ -5,9 +5,13 @@ server:
 spring:
   application:
     name: lucky-pinball-backend
+  # datasource 3개(url/username/password)는 배포 환경에서 SPRING_DATASOURCE_URL 등
+  # 환경변수로 그대로 덮어쓸 수 있다(Spring Boot가 환경변수를 yml보다 우선 적용) — Render에
+  # Neon(Postgres) 접속정보를 환경변수로 넣으면, 이 파일을 안 건드리고도 DB가 바뀐다.
+  # driver-class-name은 일부러 안 적는다 — URL 접두사(jdbc:h2: / jdbc:postgresql:)만 보고
+  # Spring Boot가 알아서 맞는 드라이버를 고른다.
   datasource:
     url: jdbc:h2:file:./data/luckypinball;AUTO_SERVER=TRUE
-    driver-class-name: org.h2.Driver
     username: sa
     password:
   jpa:
