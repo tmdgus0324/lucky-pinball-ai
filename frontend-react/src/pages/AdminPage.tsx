@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { api } from '../api/client';
 import { AdminLogin } from '../components/AdminLogin';
+import { AiHealthPanel } from '../components/AiHealthPanel';
 import { PlayersTable } from '../components/PlayersTable';
 import { GamesTable } from '../components/GamesTable';
 import { LogList } from '../components/LogList';
@@ -42,6 +43,7 @@ export function AdminPage() {
       <PlayersTable onUnauthorized={handleUnauthorized} />
       <GamesTable onUnauthorized={handleUnauthorized} />
       <LogList reloadKey={logReloadKey} onUnauthorized={handleUnauthorized} />
+      <AiHealthPanel onUnauthorized={handleUnauthorized} />
       <OverrideForm onLogged={() => setLogReloadKey((k) => k + 1)} />
     </>
   );

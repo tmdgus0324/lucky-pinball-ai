@@ -3,6 +3,8 @@ package com.luckypinball.admin;
 import com.luckypinball.common.ApiException;
 import com.luckypinball.common.ErrorLogEntry;
 import com.luckypinball.common.ErrorLogStore;
+import com.luckypinball.fortune.AiHealthResult;
+import com.luckypinball.fortune.AiHealthService;
 import com.luckypinball.fortune.FortuneResultEntity;
 import com.luckypinball.fortune.FortuneResultJpaRepository;
 import com.luckypinball.game.GameRepository;
@@ -31,15 +33,18 @@ public class AdminController {
     private final FortuneResultJpaRepository fortuneResultJpaRepository;
     private final GameRepository gameRepository;
     private final ErrorLogStore errorLogStore;
+    private final AiHealthService aiHealthService;
 
     public AdminController(PlayerJpaRepository playerJpaRepository,
                             FortuneResultJpaRepository fortuneResultJpaRepository,
                             GameRepository gameRepository,
-                            ErrorLogStore errorLogStore) {
+                            ErrorLogStore errorLogStore,
+                            AiHealthService aiHealthService) {
         this.playerJpaRepository = playerJpaRepository;
         this.fortuneResultJpaRepository = fortuneResultJpaRepository;
         this.gameRepository = gameRepository;
         this.errorLogStore = errorLogStore;
+        this.aiHealthService = aiHealthService;
     }
 
     @GetMapping("/api/admin/players")
@@ -60,6 +65,15 @@ public class AdminController {
     @GetMapping("/api/admin/logs")
     public List<ErrorLogEntry> logs() {
         return errorLogStore.recent();
+    }
+
+    /**
+     * Claude API 연결 확인. 점검 결과(정상/실패 원인)는 성공·실패와 무관하게 200으로 내려주고,
+     * 너무 자주 누르면 429를 준다. POST인 이유: 유료 호출이라 브라우저 프리패치/캐시로 실행되면 안 된다.
+     */
+    @PostMapping("/api/admin/ai-health")
+    public AiHealthResult aiHealth() {
+        return aiHealthService.check();
     }
 
     @PostMapping("/api/admin/fortune/override")

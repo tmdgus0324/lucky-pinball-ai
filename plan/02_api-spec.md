@@ -182,6 +182,15 @@
 ```
 (DB 저장 — 최신순 최대 200건 응답, 서버에는 최근 1000건 유지. `traceId` 필드도 함께 내려간다)
 
+### `POST /api/admin/ai-health`
+Claude API 연결 확인(출력 1토큰의 실제 호출). 5초 간격 제한(초과 시 429). 결과는 성공/실패와 무관하게 200.
+```json
+{ "ok": false, "status": "CREDIT_EXHAUSTED", "message": "크레딧 잔액이 부족합니다. ...", "upstreamStatus": 400,
+  "latencyMillis": 312, "model": "claude-haiku-4-5", "timeoutSeconds": 10, "fallbackEnabled": true,
+  "checkedAt": "2026-10-03T10:30:00Z" }
+```
+`status`: OK | KEY_MISSING | AUTH_FAILED | CREDIT_EXHAUSTED | RATE_LIMITED | TIMEOUT | UNREACHABLE | UPSTREAM_ERROR | ERROR
+
 ### `POST /api/admin/fortune/override` — **스텁 (미구현)**
 **Request**
 ```json

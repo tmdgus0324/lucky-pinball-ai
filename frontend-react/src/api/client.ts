@@ -161,6 +161,18 @@ export interface AdminGame {
   createdAt: string;
 }
 
+export interface AiHealth {
+  ok: boolean;
+  status: string;
+  message: string;
+  upstreamStatus: number | null;
+  latencyMillis: number;
+  model: string;
+  timeoutSeconds: number;
+  fallbackEnabled: boolean;
+  checkedAt: string;
+}
+
 export interface AdminLog {
   path: string;
   message: string;
@@ -225,6 +237,10 @@ export const api = {
 
   adminGetLogs(): Promise<AdminLog[]> {
     return request('/admin/logs', { method: 'GET' });
+  },
+
+  adminCheckAi(): Promise<AiHealth> {
+    return request('/admin/ai-health', { method: 'POST' });
   },
 
   adminOverrideFortune(playerId: number, overrideScore: number): Promise<void> {

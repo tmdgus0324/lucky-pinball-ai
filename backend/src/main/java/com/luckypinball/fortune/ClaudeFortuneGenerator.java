@@ -112,6 +112,28 @@ public class ClaudeFortuneGenerator implements FortuneService {
         }
     }
 
+    /**
+     * 관리자 화면의 "AI 연결 확인"용 최소 호출(출력 토큰 1개). 키·네트워크·크레딧·응답 속도를 실제 요청으로 확인한다.
+     * 재시도는 끈다 — 점검은 "지금 한 번 시도해서 되는가"를 보는 것이고, 재시도가 일시적 실패를 가려버리면 안 된다.
+     * 클라이언트를 만들지 못하면(키 없음) ApiException, 호출이 실패하면 SDK의 AnthropicException이 그대로 올라온다.
+     */
+    public void ping() {
+        MessageCreateParams params = MessageCreateParams.builder()
+                .model(MODEL)
+                .maxTokens(1L)
+                .addUserMessage("ping")
+                .build();
+        client().withOptions(options -> options.maxRetries(0)).messages().create(params);
+    }
+
+    public String model() {
+        return MODEL;
+    }
+
+    public long timeoutSeconds() {
+        return timeout.toSeconds();
+    }
+
     /** Claude 호출 실패를 사용자에게 의미 있는 상태 코드로 나눈다: 타임아웃 504, 요청 과다(429) 503, 그 외 502. */
     static ApiException translate(AnthropicException e) {
         if (e instanceof AnthropicIoException && isTimeout(e)) {
