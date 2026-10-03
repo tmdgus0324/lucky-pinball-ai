@@ -1,14 +1,16 @@
 :root {
-  --bg: #14121f;
-  --panel: #1e1b2e;
-  --panel-2: #262238;
-  --text: #f1eefc;
-  --muted: #a79fc4;
-  --accent: #ffd166;
-  --accent-2: #7c5cff;
+  --bg: #0f1115;
+  --panel: #171a20;
+  --panel-2: #1f232b;
+  --text: #eceff4;
+  --muted: #9aa3b2;
+  --accent: #ffd166; /* 당첨·결승선 강조 */
+  --accent-2: #ff7a1a; /* 주요 버튼 */
+  --on-accent-2: #1a1208; /* 주황 버튼 위 글자 — 흰색은 대비가 부족해서 어두운 색을 쓴다 */
   --danger: #ff6b6b;
   --ok: #4ade80;
-  --border: #322c4a;
+  --border: #2a2f39;
+  --wall: #3a404c; /* 맵의 벽·선반 */
   --radius: 14px;
   --sidebar-width: 220px;
 }
@@ -235,7 +237,7 @@ section.panel .panel-head h2 {
 
 button {
   background: var(--accent-2);
-  color: #fff;
+  color: var(--on-accent-2);
   border: none;
   padding: 10px 18px;
   border-radius: 8px;
@@ -362,7 +364,7 @@ button:disabled {
   position: relative;
   flex: 0 0 auto;
   max-width: 100%;
-  background: linear-gradient(180deg, #1a1730, #0f0d1a);
+  background: linear-gradient(180deg, #171a20, #0c0e12);
   border: 2px solid var(--border);
   border-radius: 10px;
   overflow: hidden;
@@ -394,13 +396,13 @@ button:disabled {
   margin-left: -5px;
   margin-top: -5px;
   border-radius: 50%;
-  background: #6b6486;
+  background: #7a8190;
   z-index: 1;
 }
 
 .wall-visual {
   position: absolute;
-  background: var(--border);
+  background: var(--wall);
   transform-origin: 0 50%;
   z-index: 1;
 }
@@ -408,13 +410,13 @@ button:disabled {
 /* 벽 삼각 선반 — 모양은 engine.ts에서 clip-path로 오려내고, 색은 벽과 같게 한다. */
 .wall-wedge {
   position: absolute;
-  background: var(--border);
+  background: var(--wall);
   z-index: 1;
 }
 
 .spinner-bar {
   position: absolute;
-  background: linear-gradient(90deg, var(--danger), var(--accent));
+  background: linear-gradient(90deg, var(--accent-2), var(--accent));
   border-radius: 999px;
   transform-origin: 50% 50%;
   z-index: 1;
@@ -449,7 +451,7 @@ button:disabled {
   justify-content: center;
   font-size: 9px;
   font-weight: 700;
-  color: #14121f;
+  color: #14161a;
   box-shadow: 0 4px 10px rgba(0,0,0,0.4);
   z-index: 3;
   white-space: nowrap;
@@ -521,7 +523,7 @@ button:disabled {
 .result-banner {
   text-align: center;
   padding: 28px;
-  background: linear-gradient(135deg, rgba(255,209,102,0.15), rgba(124,92,255,0.15));
+  background: linear-gradient(135deg, rgba(255,209,102,0.15), rgba(255,122,26,0.15));
   border: 1px solid var(--accent);
   border-radius: var(--radius);
 }
@@ -558,7 +560,7 @@ button:disabled {
   padding: 18px 32px;
   min-width: 240px;
   max-width: 100%;
-  background: linear-gradient(135deg, rgba(40, 34, 70, 0.96), rgba(32, 26, 58, 0.96));
+  background: linear-gradient(135deg, rgba(31, 35, 43, 0.96), rgba(23, 26, 32, 0.96));
   box-shadow: 0 10px 32px rgba(0, 0, 0, 0.55);
 }
 
