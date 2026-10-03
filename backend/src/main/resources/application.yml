@@ -25,6 +25,12 @@ spring:
       enabled: ${H2_CONSOLE_ENABLED:false}
       path: /h2-console
 
+# 모든 로그 줄에 요청 추적 ID를 붙인다([abcd1234]). 요청 밖(서버 시작 등)에서는 [--------].
+# 사용자가 화면의 "오류 ID"를 알려주면 이 ID로 그 요청의 로그를 전부 찾을 수 있다(TraceIdFilter).
+logging:
+  pattern:
+    level: "%5p [%X{traceId:--------}]"
+
 admin:
   username: ${ADMIN_USERNAME:admin}
   # 기본값을 빈 문자열로 둔 이유: 비워두면 로그인이 항상 실패하게 만들어서(AdminAuthController

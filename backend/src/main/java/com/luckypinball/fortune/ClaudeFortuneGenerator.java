@@ -13,6 +13,8 @@ import com.luckypinball.common.ApiException;
 import java.time.LocalDate;
 import java.time.format.TextStyle;
 import java.util.Locale;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
@@ -29,7 +31,11 @@ import org.springframework.stereotype.Service;
 @Service
 public class ClaudeFortuneGenerator implements FortuneService {
 
+    private static final Logger log = LoggerFactory.getLogger(ClaudeFortuneGenerator.class);
+
     private static final String MODEL = "claude-haiku-4-5";
+
+    private static final String UPSTREAM_FAILURE_MESSAGE = "AI 운세 서비스에 일시적인 문제가 있습니다. 잠시 후 다시 시도해주세요.";
 
     private static final String[] ZODIAC = {
             "원숭이띠", "닭띠", "개띠", "돼지띠", "쥐띠", "소띠", "호랑이띠", "토끼띠", "용띠", "뱀띠", "말띠", "양띠"
@@ -57,8 +63,9 @@ public class ClaudeFortuneGenerator implements FortuneService {
             try {
                 client = AnthropicOkHttpClient.fromEnv();
             } catch (RuntimeException e) {
-                throw ApiException.upstreamFailure(
-                        "ANTHROPIC_API_KEY 환경변수가 설정되어 있지 않습니다. Claude API 키를 발급받아 환경변수로 설정한 뒤 다시 시도해주세요.");
+                // 환경변수 이름 같은 서버 설정을 사용자 응답에 싣지 않는다. 원인(키 없음)은 cause로 넘겨서
+                // GlobalExceptionHandler의 ERROR 로그("Caused by")에서 확인한다.
+                throw ApiException.upstreamFailure(UPSTREAM_FAILURE_MESSAGE, e);
             }
         }
         return client;
@@ -75,8 +82,11 @@ public class ClaudeFortuneGenerator implements FortuneService {
     public void warmUpClient() {
         try {
             client();
+            log.info("Claude 클라이언트 준비 완료");
         } catch (ApiException e) {
-            // ANTHROPIC_API_KEY 미설정 — 로컬 개발 등에서는 정상적인 상황이라 별도 처리 없이 넘어간다.
+            // ANTHROPIC_API_KEY 미설정 — 로컬 개발 등에서는 정상적인 상황이지만, 배포 환경에서 이 줄이
+            // 보이면 환경변수를 빠뜨린 것이라 로그로는 남긴다.
+            log.warn("ANTHROPIC_API_KEY 미설정 — 서버는 정상 기동하지만 실제 운세 조회 시 실패합니다");
         }
     }
 
@@ -107,6 +117,7 @@ public class ClaudeFortuneGenerator implements FortuneService {
                 .build();
 
         AiFortune result;
+        long startedAt = System.currentTimeMillis();
         try {
             StructuredMessage<AiFortune> response = client().messages().create(params);
             result = response.content().stream()
@@ -114,8 +125,12 @@ public class ClaudeFortuneGenerator implements FortuneService {
                     .findFirst()
                     .map(StructuredTextBlock::text)
                     .orElseThrow(() -> ApiException.upstreamFailure("Claude가 운세 결과를 반환하지 않았습니다."));
+            // 이름·생년월일이 담긴 프롬프트와 응답 본문은 남기지 않는다 — 호출 사실과 걸린 시간만.
+            log.info("Claude 호출 완료: model={} {}ms", MODEL, System.currentTimeMillis() - startedAt);
         } catch (AnthropicServiceException e) {
-            throw ApiException.upstreamFailure("Claude API 호출에 실패했습니다: " + e.getMessage());
+            // Claude의 원문 오류(예: "API key is invalid")는 사용자 응답에 싣지 않고, 원인으로만 넘긴다 —
+            // GlobalExceptionHandler가 남기는 ERROR 로그에 "Caused by"로 실제 응답 코드가 보인다.
+            throw ApiException.upstreamFailure(UPSTREAM_FAILURE_MESSAGE, e);
         }
 
         // AI 응답값이 프롬프트에 적힌 범위를 벗어나더라도(모델이 완벽히 지시를 따르지 않을 수 있음)

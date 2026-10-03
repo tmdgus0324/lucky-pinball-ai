@@ -639,6 +639,14 @@ table.admin-table th {
   margin-right: 6px;
 }
 
+/* 서버 로그와 대조할 요청 추적 ID — 고정폭 + 강조색으로 한눈에 찾고 그대로 복사하기 쉽게. */
+.log-list .log-item .trace-id {
+  color: var(--accent);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  margin-right: 8px;
+  user-select: all;
+}
+
 .override-form {
   display: flex;
   gap: 10px;

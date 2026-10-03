@@ -33,9 +33,12 @@ function setAdminToken(token: string | null) {
 
 export class ApiError extends Error {
   status: number;
-  constructor(message: string, status: number) {
+  /** 서버가 에러 응답에 실어 보낸 요청 추적 ID — 서버 로그에서 이 요청을 찾는 열쇠. */
+  traceId?: string;
+  constructor(message: string, status: number, traceId?: string) {
     super(message);
     this.status = status;
+    this.traceId = traceId;
   }
 }
 
@@ -62,13 +65,18 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
 
   if (!response.ok) {
     let message = `HTTP ${response.status}`;
+    let traceId: string | undefined;
     try {
       const body = await response.json();
       if (body && body.error) message = body.error;
+      if (body && typeof body.traceId === 'string') traceId = body.traceId;
     } catch {
       // 응답 바디가 JSON이 아닌 경우 상태 코드만 사용
     }
-    throw new ApiError(message, response.status);
+    // 서버 쪽 오류(5xx)는 사용자가 할 수 있는 게 없으니, "오류 ID"를 알려주면 서버 로그에서 바로
+    // 찾을 수 있게 메시지에 붙여둔다. 입력 실수 같은 4xx에는 ID가 오히려 잡음이라 붙이지 않는다.
+    if (traceId && response.status >= 500) message += ` (오류 ID: ${traceId})`;
+    throw new ApiError(message, response.status, traceId);
   }
 
   if (response.status === 204) return null as T;
@@ -157,6 +165,7 @@ export interface AdminLog {
   path: string;
   message: string;
   timestamp: string;
+  traceId: string | null;
 }
 
 export interface ReusablePlayer {

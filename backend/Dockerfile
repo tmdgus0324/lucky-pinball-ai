@@ -10,4 +10,6 @@ FROM eclipse-temurin:17-jre
 WORKDIR /app
 COPY --from=build /app/build/libs/*.jar app.jar
 EXPOSE 8080
-ENTRYPOINT ["java", "-jar", "app.jar"]
+# 한글 로그 메시지가 컨테이너 로케일에 따라 깨지지 않도록 인코딩을 명시한다(Windows에서는 기본값이
+# cp949라 로컬에선 콘솔 인코딩을 따르고, 운영(Linux)에서는 이 옵션으로 UTF-8을 보장한다).
+ENTRYPOINT ["java", "-Dfile.encoding=UTF-8", "-jar", "app.jar"]

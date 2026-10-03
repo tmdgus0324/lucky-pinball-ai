@@ -38,6 +38,11 @@ export function LogList({ reloadKey, onUnauthorized }: LogListProps) {
           logs?.map((log, index) => (
             <div className="log-item" key={index}>
               <span className="path">{log.path}</span>
+              {log.traceId && (
+                <span className="trace-id" title="서버 로그에서 이 ID로 같은 요청의 로그를 찾을 수 있습니다">
+                  #{log.traceId}
+                </span>
+              )}
               {log.message} · {log.timestamp}
             </div>
           ))}

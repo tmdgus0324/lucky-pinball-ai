@@ -28,7 +28,8 @@
 - 처음에는 Vanilla JS(`frontend/`)로 만들었다가, 이후 React로 마이그레이션했습니다(`frontend-react/`). React를 배우면서 정리한 내용은 `devhelp/15`~`23`에 남겨뒀습니다.
 - `FortuneService`: 초기 개발 단계에서는 API 연동 없이 게임 로직·화면부터 만들기 위해 인터페이스로 분리하고 Mock 구현체(`MockFortuneGenerator`)로 먼저 뼈대를 갖췄습니다. 이후 실제 Claude API 연동(`ClaudeFortuneGenerator`)으로 교체했고, Mock 구현체는 API 호출 없이 로직만 검증하는 단위 테스트용으로 남겨뒀습니다.
 - 같은 이유로 `GameRepository`, `PlayerJpaRepository`, `MatterAdapter`도 인터페이스로 분리해, 구현체를 바꿔도 호출부 코드는 그대로 유지되도록 했습니다.
-- 오류 로그가 발생하면 `GlobalExceptionHandler`가 모아서 관리자 화면(`/api/admin/logs`)에서 바로 확인할 수 있도록 구현했습니다. 다만 지금은 인메모리 저장이라 서버가 재시작되면 기록이 사라져, DB 등으로 영속화하는 보완이 필요합니다.
+- 모든 요청에 추적 ID(`traceId`)를 붙여서, 서버 로그 줄과 에러 응답이 같은 ID를 갖습니다. 화면에 뜬 "오류 ID"를 알려주면 서버 로그에서 그 요청의 흐름(AI 호출, 캐시 적중, 예외 스택트레이스)을 바로 찾을 수 있습니다. 사용자 응답에는 서버 내부 사정을 싣지 않고 일반 문구와 ID만 줍니다(`devhelp/40`).
+- 오류가 발생하면 `GlobalExceptionHandler`가 모아서 관리자 화면(`/api/admin/logs`)에서 바로 확인할 수 있도록 구현했습니다. 다만 지금은 인메모리 저장이라 서버가 재시작되면 목록이 비어, DB 등으로 영속화하는 보완이 필요합니다(서버 로그에는 남아 있습니다).
 - 물리 엔진 코드는 React 밖에 두고, `PinballBoard`가 마운트·정리만 담당합니다.
 - 매번 Claude API를 부르면 토큰 비용이 계속 쌓입니다. 그래서 이름+생년월일을 키로 삼아 DB를 캐시처럼 쓰고, 같은 신원은 재호출 없이 이전 결과를 재사용합니다.
 
@@ -58,7 +59,7 @@ devhelp/         구현 과정과 트러블슈팅 기록
 
 **진행 및 보완 예정**
 - 오류 로그 DB 영속화 (지금은 인메모리라 서버 재시작 시 유실. 게임 결과는 이미 DB에 저장합니다)
-- SLF4J 로깅·요청 추적 ID, Claude API 타임아웃·장애 대응, 같은 신원 동시 요청 시 AI 중복 호출 방지
+- Claude API 타임아웃·장애 대응, 같은 신원 동시 요청 시 AI 중복 호출 방지
 - 모바일에서 운세 결과 카드 텍스트가 길면 잘리는 문제 보완
 
 자세한 계획은 [`plan/05_improvement-backlog.md`](./plan/05_improvement-backlog.md)에 정리해뒀습니다.

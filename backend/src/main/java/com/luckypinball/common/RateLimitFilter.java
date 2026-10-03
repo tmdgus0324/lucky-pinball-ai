@@ -7,6 +7,8 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
@@ -22,6 +24,8 @@ import org.springframework.web.filter.OncePerRequestFilter;
  */
 @Component
 public class RateLimitFilter extends OncePerRequestFilter {
+
+    private static final Logger log = LoggerFactory.getLogger(RateLimitFilter.class);
 
     private static final String LIMITED_PATH = "/api/fortune";
     private static final int MAX_REQUESTS_PER_WINDOW = 20;
@@ -41,10 +45,11 @@ public class RateLimitFilter extends OncePerRequestFilter {
         if (!window.tryConsume()) {
             // AdminAuthFilter의 401과 같은 이유로 CORS 헤더를 직접 붙여야 한다 — 안 그러면
             // 브라우저가 429를 "Failed to fetch"로 뭉개버린다(devhelp/34).
+            log.warn("요청 제한 초과: ip={} path={}", clientIp(request), request.getRequestURI());
             CorsSupport.applyCorsHeaders(request, response);
             response.setStatus(HttpStatus.TOO_MANY_REQUESTS.value());
             response.setContentType("application/json;charset=UTF-8");
-            response.getWriter().write("{\"error\":\"요청이 너무 많습니다. 잠시 후 다시 시도해주세요.\"}");
+            response.getWriter().write(ErrorBodies.json("요청이 너무 많습니다. 잠시 후 다시 시도해주세요."));
             return;
         }
         chain.doFilter(request, response);

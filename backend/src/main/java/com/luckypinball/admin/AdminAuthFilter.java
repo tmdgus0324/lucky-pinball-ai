@@ -1,11 +1,14 @@
 package com.luckypinball.admin;
 
 import com.luckypinball.common.CorsSupport;
+import com.luckypinball.common.ErrorBodies;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
@@ -20,6 +23,8 @@ import org.springframework.web.filter.OncePerRequestFilter;
  */
 @Component
 public class AdminAuthFilter extends OncePerRequestFilter {
+
+    private static final Logger log = LoggerFactory.getLogger(AdminAuthFilter.class);
 
     private static final String ADMIN_PATH_PREFIX = "/api/admin/";
     private static final String LOGIN_PATH = "/api/admin/login";
@@ -53,10 +58,12 @@ public class AdminAuthFilter extends OncePerRequestFilter {
             // 이 응답은 DispatcherServlet까지 안 가서 WebConfig의 CORS 설정이 안 먹는다 —
             // 직접 CORS 헤더를 안 붙이면 브라우저가 401을 "Failed to fetch"로 뭉개버린다
             // (devhelp/34에서 실제로 겪은 버그).
+            // 토큰 값 자체는 로그에 남기지 않는다 — 어떤 요청이 막혔는지만 남긴다.
+            log.warn("관리자 API 인증 실패: {} {}", request.getMethod(), path);
             CorsSupport.applyCorsHeaders(request, response);
             response.setStatus(HttpStatus.UNAUTHORIZED.value());
             response.setContentType("application/json;charset=UTF-8");
-            response.getWriter().write("{\"error\":\"로그인이 필요합니다.\"}");
+            response.getWriter().write(ErrorBodies.json("로그인이 필요합니다."));
             return;
         }
 

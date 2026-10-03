@@ -2,8 +2,10 @@ package com.luckypinball.admin;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import com.luckypinball.common.TraceId;
 import jakarta.servlet.FilterChain;
 import org.junit.jupiter.api.Test;
+import org.slf4j.MDC;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 
@@ -104,6 +106,21 @@ class AdminAuthFilterTest {
 
         assertEquals(401, response.getStatus());
         assertEquals("https://lucky-pinball-ai.vercel.app", response.getHeader("Access-Control-Allow-Origin"));
+    }
+
+    @Test
+    void the401BodyCarriesTheTraceIdSoTheUserCanReportIt() throws Exception {
+        AdminAuthFilter filter = new AdminAuthFilter(new AdminSessionStore());
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        MDC.put(TraceId.MDC_KEY, "abc12345");
+        try {
+            filter.doFilter(new MockHttpServletRequest("GET", "/api/admin/players"), response, noop);
+        } finally {
+            MDC.remove(TraceId.MDC_KEY);
+        }
+
+        assertEquals("{\"error\":\"로그인이 필요합니다.\",\"traceId\":\"abc12345\"}", response.getContentAsString());
     }
 
     @Test

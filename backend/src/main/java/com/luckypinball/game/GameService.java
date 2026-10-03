@@ -13,10 +13,14 @@ import java.util.OptionalInt;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 @Service
 public class GameService {
+
+    private static final Logger log = LoggerFactory.getLogger(GameService.class);
 
     private static final int MIN_PARTICIPANTS = 2;
     private static final int MAX_PARTICIPANTS = 8;
@@ -41,7 +45,9 @@ public class GameService {
         participants = applyRelativeStartY(participants);
 
         GameSession session = new GameSession(UUID.randomUUID().toString(), participants);
-        return gameRepository.save(session);
+        GameSession saved = gameRepository.save(session);
+        log.info("게임 생성: gameId={} 참가자={}명", saved.getGameId(), participants.size());
+        return saved;
     }
 
     /**
@@ -74,6 +80,7 @@ public class GameService {
     public GameSession start(String gameId) {
         GameSession session = getSessionOrThrow(gameId);
         session.start();
+        log.info("게임 시작: gameId={}", gameId);
         return gameRepository.save(session);
     }
 
@@ -105,6 +112,9 @@ public class GameService {
         String selectedName = namesByPlayerId.get(finishOrder.get(finishOrder.size() - 1));
         session.reportResult(ranking, selectedName);
         session = gameRepository.save(session);
+        // 당첨자는 이름 대신 playerId로 남긴다(이름은 사용자가 입력한 값).
+        log.info("게임 결과 확정: gameId={} 당첨 playerId={} 참가자={}명",
+                gameId, finishOrder.get(finishOrder.size() - 1), finishOrder.size());
 
         return toView(session);
     }

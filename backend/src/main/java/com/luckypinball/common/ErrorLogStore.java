@@ -15,8 +15,8 @@ public class ErrorLogStore {
 
     private final CopyOnWriteArrayList<ErrorLogEntry> entries = new CopyOnWriteArrayList<>();
 
-    public void record(String path, String message) {
-        entries.add(0, new ErrorLogEntry(Instant.now(), path, message));
+    public void record(String path, String message, String traceId) {
+        entries.add(0, new ErrorLogEntry(Instant.now(), path, message, traceId));
         while (entries.size() > MAX_ENTRIES) {
             entries.remove(entries.size() - 1);
         }

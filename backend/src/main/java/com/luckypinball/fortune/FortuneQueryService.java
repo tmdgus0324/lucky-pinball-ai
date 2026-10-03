@@ -5,6 +5,8 @@ import com.luckypinball.player.PlayerEntity;
 import com.luckypinball.player.PlayerService;
 import java.time.LocalDate;
 import java.util.Optional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 /**
@@ -19,6 +21,8 @@ import org.springframework.stereotype.Service;
  */
 @Service
 public class FortuneQueryService {
+
+    private static final Logger log = LoggerFactory.getLogger(FortuneQueryService.class);
 
     private final PlayerService playerService;
     private final FortuneService fortuneService;
@@ -36,6 +40,7 @@ public class FortuneQueryService {
         PlayerEntity player = playerService.getById(playerId);
 
         if (player.getBirthDate() == null) {
+            log.debug("생년월일 미입력 — 운세 없이 참여: playerId={}", playerId);
             return new FortuneQueryResult(
                     playerId, player.getName(), null, null, null,
                     new Buff(0, 0), "NONE");
@@ -55,7 +60,9 @@ public class FortuneQueryService {
             luckyNumber = entity.getLuckyNumber();
             fortuneMessage = entity.getFortuneMessage();
             source = FortuneResultEntity.SOURCE_CACHE;
+            log.info("운세 캐시 적중 — AI 호출 생략: playerId={}", playerId);
         } else {
+            log.info("운세 캐시 미스 — AI 호출: playerId={}", playerId);
             FortuneResult raw = fortuneService.analyze(player.getName(), player.getBirthDate());
             fortuneScore = raw.fortuneScore();
             luckyNumber = raw.luckyNumber();

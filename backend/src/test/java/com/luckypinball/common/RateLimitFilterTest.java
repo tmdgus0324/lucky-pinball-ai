@@ -1,9 +1,11 @@
 package com.luckypinball.common;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import jakarta.servlet.FilterChain;
 import org.junit.jupiter.api.Test;
+import org.slf4j.MDC;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 
@@ -22,6 +24,27 @@ class RateLimitFilterTest {
 
         MockHttpServletResponse blocked = doFortuneRequest(filter, noop, "203.0.113.1");
         assertEquals(429, blocked.getStatus(), "21번째 요청은 막혀야 한다");
+    }
+
+    @Test
+    void the429BodyCarriesTheTraceId() throws Exception {
+        RateLimitFilter filter = new RateLimitFilter();
+        FilterChain noop = (req, res) -> {
+        };
+        for (int i = 0; i < 20; i++) {
+            doFortuneRequest(filter, noop, "203.0.113.2");
+        }
+
+        MDC.put(TraceId.MDC_KEY, "abc12345");
+        MockHttpServletResponse blocked;
+        try {
+            blocked = doFortuneRequest(filter, noop, "203.0.113.2");
+        } finally {
+            MDC.remove(TraceId.MDC_KEY);
+        }
+
+        assertEquals(429, blocked.getStatus());
+        assertTrue(blocked.getContentAsString().contains("\"traceId\":\"abc12345\""), blocked.getContentAsString());
     }
 
     @Test

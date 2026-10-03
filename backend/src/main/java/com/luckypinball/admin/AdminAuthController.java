@@ -3,6 +3,8 @@ package com.luckypinball.admin;
 import com.luckypinball.common.ApiException;
 import jakarta.validation.constraints.NotBlank;
 import java.util.Map;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -16,6 +18,8 @@ import org.springframework.web.bind.annotation.RestController;
  */
 @RestController
 public class AdminAuthController {
+
+    private static final Logger log = LoggerFactory.getLogger(AdminAuthController.class);
 
     private final String adminUsername;
     private final String adminPassword;
@@ -37,11 +41,14 @@ public class AdminAuthController {
                 && adminUsername.equals(request.username())
                 && adminPassword.equals(request.password());
 
+        // 입력된 아이디/비밀번호는 로그에 남기지 않는다(비밀번호를 잘못 친 흔적이 그대로 남을 수 있다).
         if (!match) {
+            log.warn("관리자 로그인 실패");
             throw ApiException.unauthorized("아이디 또는 비밀번호가 올바르지 않습니다.");
         }
 
         String token = sessionStore.issue();
+        log.info("관리자 로그인 성공");
         return ResponseEntity.ok(Map.of("token", token));
     }
 

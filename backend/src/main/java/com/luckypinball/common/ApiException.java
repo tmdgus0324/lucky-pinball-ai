@@ -11,6 +11,11 @@ public class ApiException extends RuntimeException {
         this.status = status;
     }
 
+    public ApiException(HttpStatus status, String message, Throwable cause) {
+        super(message, cause);
+        this.status = status;
+    }
+
     public static ApiException notFound(String message) {
         return new ApiException(HttpStatus.NOT_FOUND, message);
     }
@@ -34,6 +39,11 @@ public class ApiException extends RuntimeException {
     /** 우리가 의존하는 외부 서비스(예: Claude API) 호출이 실패했을 때 사용. */
     public static ApiException upstreamFailure(String message) {
         return new ApiException(HttpStatus.BAD_GATEWAY, message);
+    }
+
+    /** 원인 예외를 같이 넘기면 GlobalExceptionHandler가 남기는 서버 로그에 "Caused by"로 그대로 보인다. */
+    public static ApiException upstreamFailure(String message, Throwable cause) {
+        return new ApiException(HttpStatus.BAD_GATEWAY, message, cause);
     }
 
     public HttpStatus getStatus() {
