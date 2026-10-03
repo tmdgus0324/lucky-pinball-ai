@@ -29,7 +29,7 @@ export function LogList({ reloadKey, onUnauthorized }: LogListProps) {
       <h2>
         오류 로그 <span className="badge">GET /api/admin/logs</span>
       </h2>
-      <p className="desc">서버 재시작 전까지만 유지되는 인메모리 로그입니다 (영속화는 Phase 2).</p>
+      <p className="desc">서버가 재시작되어도 남는 최근 오류 목록입니다 (DB 저장, 최근 1000건 유지, 화면에는 200건).</p>
       <div className="log-list">
         {error && <div className="log-item">불러오기 실패: {error}</div>}
         {!error && logs === null && <div className="log-item">불러오는 중...</div>}

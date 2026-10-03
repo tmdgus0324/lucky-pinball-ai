@@ -10,6 +10,9 @@ import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -24,7 +27,26 @@ import org.springframework.web.HttpRequestMethodNotSupportedException;
 
 class GlobalExceptionHandlerTest {
 
-    private final ErrorLogStore store = new ErrorLogStore();
+    /** DB 없이 기록만 모아두는 대역 — 핸들러가 무엇을 기록하는지만 본다(실제 저장은 ErrorLogStoreTest). */
+    static class RecordingStore extends ErrorLogStore {
+        final List<ErrorLogEntry> entries = new ArrayList<>();
+
+        RecordingStore() {
+            super(null, 1);
+        }
+
+        @Override
+        public void record(String path, String message, String traceId) {
+            entries.add(0, new ErrorLogEntry(Instant.now(), path, message, traceId));
+        }
+
+        @Override
+        public List<ErrorLogEntry> recent() {
+            return List.copyOf(entries);
+        }
+    }
+
+    private final RecordingStore store = new RecordingStore();
     private final GlobalExceptionHandler handler = new GlobalExceptionHandler(store);
     private final MockHttpServletRequest request = new MockHttpServletRequest("POST", "/api/player");
 

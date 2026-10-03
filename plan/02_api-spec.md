@@ -180,7 +180,7 @@
   { "timestamp": "2026-09-22T10:05:00Z", "path": "/api/fortune", "message": "Player not found: 99" }
 ]
 ```
-(인메모리 보관 — 서버 재시작 시 초기화됨)
+(DB 저장 — 최신순 최대 200건 응답, 서버에는 최근 1000건 유지. `traceId` 필드도 함께 내려간다)
 
 ### `POST /api/admin/fortune/override` — **스텁 (미구현)**
 **Request**
