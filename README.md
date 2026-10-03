@@ -20,7 +20,7 @@
 ## 기술 스택
 
 - 백엔드: Java 17, Spring Boot 4, Spring Data JPA, Gradle, Anthropic Java SDK
-- DB: 로컬 개발은 H2(파일), 배포는 Neon(PostgreSQL) — 접속 정보를 환경변수로 바꿔 끼웁니다(`devhelp/35`)
+- DB: 로컬 개발은 H2(파일), 배포는 Neon(PostgreSQL) — 소스에는 H2 설정 하나뿐이고 운영은 Render 환경변수가 덮어씁니다. 정리는 `devhelp/35`의 4-2장
 - 프론트엔드: React 19 + TypeScript + Vite, Matter.js (기존 Vanilla JS 버전 `frontend/`도 병행 유지)
 - 배포: Render(Docker) + Vercel + Neon
 

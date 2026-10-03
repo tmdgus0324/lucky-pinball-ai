@@ -159,6 +159,48 @@ jdbc:postgresql://ep-xxxx-pooler.aws.neon.tech/neondb?sslmode=require&prepareThr
 - `channel_binding=require`는 뺐다 — libpq(psql) 전용 파라미터라 Java PostgreSQL 드라이버가 못 알아들을 수 있다.
 - `prepareThreshold=0`을 추가했다 — 호스트명의 `-pooler`는 Neon이 **PgBouncer**(커넥션 풀러)를 거친다는 뜻인데, 이 모드에서는 JDBC 드라이버의 서버사이드 prepared statement 캐싱이 충돌할 수 있어서 꺼둔다(Neon 공식 가이드 권장 설정).
 
+### 4-2. 로컬 DB와 운영 DB는 어디서 정해지나 (나중에 헷갈릴 때 보는 정리)
+
+**한 줄 요약**: 소스에는 DB 설정이 **하나(H2)** 뿐이고, 운영이 Neon을 보는 것은 **Render의 환경변수**가 그 설정을 덮어쓰기 때문이다. Neon의 주소·계정·비밀번호는 소스 어디에도 없다.
+
+| | 로컬 | 운영(Render) |
+|---|---|---|
+| DB | H2 파일 DB — `backend/data/luckypinball.mv.db` | Neon PostgreSQL |
+| 무엇이 정하나 | `application.yml`의 기본값(`jdbc:h2:file:./data/luckypinball;AUTO_SERVER=TRUE`) | Render 환경변수 `SPRING_DATASOURCE_URL` / `_USERNAME` / `_PASSWORD` |
+| 데이터 | 내 PC의 파일에만 쌓임 | Neon에만 쌓임 |
+| 테스트(`./gradlew test`, CI) | 둘 다 아님 — 실행마다 새로 만들어지는 **메모리 H2**(`src/test/resources/application.properties`) |
+
+- **Neon에는 운영 DB 하나만 있다.** 로컬 데이터를 Neon에서 따로 관리하는 구조가 아니다. 로컬과 운영은 서로의 데이터를 보지 못한다.
+- 소스에 있는 것: `build.gradle`에 `h2`와 `postgresql` 드라이버가 둘 다 `runtimeOnly`. 프로필 파일(`application-prod.yml` 등)은 **없다**. 설정 파일은 `application.yml` 하나다.
+- 환경변수가 yml보다 우선하는 것은 Spring Boot 기본 동작이다(`SPRING_DATASOURCE_URL` → `spring.datasource.url`).
+- 이 방식을 **유지하기로 했다.** 비밀번호가 git에 올라가지 않고, 소스가 단순하다. 단점은 "운영이 어떤 DB인지"가 코드 저장소만 봐서는 드러나지 않는다는 점이라, 이 문서로 보완한다.
+
+**지금 어떤 DB에 붙어 있는지 확인하는 방법**
+
+| 확인할 곳 | 방법 | 보이는 것 |
+|---|---|---|
+| 운영 | Render 배포 로그에서 `Database dialect` 검색 | `PostgreSQLDialect`면 Neon, `H2Dialect`면 H2(환경변수가 빠진 것) |
+| 운영 | Render → Environment 화면 | `SPRING_DATASOURCE_*` 3개가 있는지 |
+| 운영 데이터 | Neon 콘솔 또는 DBeaver로 조회 | 테이블/행 |
+| 로컬 | 서버 로그의 `Database dialect` | 환경변수를 안 줬다면 `H2Dialect` |
+| 로컬 | `backend/data/` 폴더 | `luckypinball.mv.db`가 로컬 DB 파일 |
+
+**주의할 점**
+
+- **로컬에서 운영 환경변수를 주고 서버를 켜면 운영 DB를 직접 수정한다.** `ddl-auto: update`가 운영 테이블 구조까지 바꿀 수 있다. 운영 데이터를 보기만 할 때는 DBeaver로 **조회만** 한다.
+- **로컬 DB 초기화**는 서버를 먼저 끄고 `backend/data/luckypinball*.db`를 지우면 된다(다음 기동 때 새로 만들어진다). **서버가 켜져 있는 상태에서 지우지 않는다** — 실제로 이렇게 지웠다가 켜져 있던 서버의 DB가 사라진 적이 있다.
+- 로컬(H2)과 운영(Postgres)은 **DB 엔진이 다르다.** 지금은 JPA만 써서 문제가 없지만, 엔진마다 다르게 동작하는 SQL(예: 네이티브 쿼리, 날짜 함수)을 쓰기 시작하면 로컬과 CI(둘 다 H2)에서는 통과하고 운영에서만 실패할 수 있다. 그런 쿼리를 추가할 때는 운영에서 따로 확인한다.
+
+**검토했지만 지금은 하지 않기로 한 대안**
+
+| 대안 | 얻는 것 | 안 한 이유 |
+|---|---|---|
+| Spring 프로필 분리(`application-local.yml`/`application-prod.yml`) | 소스만 봐도 "운영은 Postgres"가 보임 | 접속 주소·비밀번호는 어차피 환경변수로 받아야 해서 이 규모에서는 이득이 작음 |
+| Neon 브랜치로 개발용 DB 추가 | 로컬에서도 Postgres 엔진 사용 | 무료 플랜의 브랜치 한도를 확인하지 못함, 인터넷 필요 |
+| 로컬 Docker Postgres | 로컬도 Postgres 엔진 | Docker 설치/실행 부담 |
+
+엔진 차이로 실제 문제가 생기면 그때 Docker Postgres나 Neon 브랜치로 엔진을 맞추는 것을 다시 검토한다.
+
 ---
 
 ## 5. 검증 과정
