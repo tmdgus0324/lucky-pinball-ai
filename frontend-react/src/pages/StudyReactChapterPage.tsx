@@ -50,6 +50,8 @@ export function StudyReactChapterPage() {
   const prev = CHAPTERS[index - 1];
   const next = CHAPTERS[index + 1];
   const Demo = chapter.demo;
+  // 이전/다음 챕터로 가도 보던 탭(코드/정리)을 유지한다 — 정리를 이어서 읽을 때 매번 데모 탭으로 돌아가지 않게.
+  const tabSearch = tab === 'demo' ? '' : `?tab=${tab}`;
 
   return (
     <>
@@ -100,7 +102,7 @@ export function StudyReactChapterPage() {
         )}
         {tab === 'code' && (
           <Suspense fallback={<p className="status-text">불러오는 중...</p>}>
-            <CodeView chapter={chapter} />
+            <CodeView key={chapter.id} chapter={chapter} />
           </Suspense>
         )}
         {tab === 'notes' && (
@@ -111,8 +113,8 @@ export function StudyReactChapterPage() {
       </section>
 
       <nav className="study-pager">
-        {prev ? <Link to={`/study/react/${prev.id}`}>← {prev.title}</Link> : <span />}
-        {next ? <Link to={`/study/react/${next.id}`}>{next.title} →</Link> : <span />}
+        {prev ? <Link to={`/study/react/${prev.id}${tabSearch}`}>← {prev.title}</Link> : <span />}
+        {next ? <Link to={`/study/react/${next.id}${tabSearch}`}>{next.title} →</Link> : <span />}
       </nav>
     </>
   );

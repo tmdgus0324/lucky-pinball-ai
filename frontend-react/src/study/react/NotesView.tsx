@@ -1,13 +1,25 @@
-import { useEffect, useState } from 'react';
-import ReactMarkdown from 'react-markdown';
+import {
+  Children,
+  isValidElement,
+  useEffect,
+  useState,
+  type ComponentProps,
+  type ReactNode,
+} from 'react';
+import ReactMarkdown, { type ExtraProps } from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import type { Chapter } from './chapters';
+import { HighlightedCode } from './HighlightedCode';
 
 // 정리 노트는 빌드에 포함한다(GitHub에서 실행 시점에 가져오지 않는다) — 네트워크와 무관하게 항상 같은 내용이 보이도록.
 const notes = import.meta.glob('./notes/*.md', { query: '?raw', import: 'default' }) as Record<
   string,
   () => Promise<string>
 >;
+
+/** 노트 안에서 AI 코멘트 블록을 알아보는 표식: 인용(>) 블록의 첫 문단이 정확히 이 글자일 때 */
+const AI_MARKER = 'AI 코멘트';
+const AI_PREF_KEY = 'study.showAiComments';
 
 interface Section {
   title: string | null;
@@ -37,9 +49,68 @@ function renderTitle(title: string) {
   return title.split('`').map((part, index) => (index % 2 === 1 ? <code key={index}>{part}</code> : part));
 }
 
+// react-markdown이 넘겨주는 hast 노드 중 글자를 읽는 데 필요한 부분만 쓴다(별도 타입 패키지에 기대지 않으려고).
+type HastNode = { type: string; value?: string; children?: HastNode[] };
+
+function textOf(node: HastNode): string {
+  if (node.type === 'text') return node.value ?? '';
+  return (node.children ?? []).map(textOf).join('');
+}
+
+/**
+ * 인용(>) 블록 중 첫 문단이 "AI 코멘트"인 것은 말풍선 모양의 AI 코멘트로 보여준다.
+ * 나머지 인용은 평범한 인용 그대로 둔다. 사용자가 쓴 원문과 AI가 보탠 설명을 눈으로 구분하기 위한 장치다.
+ */
+function Blockquote({ node, children }: ComponentProps<'blockquote'> & ExtraProps) {
+  const hast = node as unknown as HastNode | undefined;
+  const firstParagraph = hast?.children?.find((child) => child.type === 'element');
+
+  if (firstParagraph && textOf(firstParagraph).trim() === AI_MARKER) {
+    const parts = Children.toArray(children);
+    const markerIndex = parts.findIndex((part) => typeof part !== 'string'); // 줄바꿈 글자를 건너뛴 첫 요소 = 표식 문단
+    return (
+      <aside className="ai-comment">
+        <div className="ai-comment-title">💬 AI 코멘트</div>
+        {parts.filter((_, index) => index !== markerIndex)}
+      </aside>
+    );
+  }
+  return <blockquote>{children}</blockquote>;
+}
+
+/** 코드 블록(```)은 하이라이터로 보여준다. 하이라이터는 lazy라 도착 전에는 색 없는 코드가 먼저 보인다. */
+function Pre({ children }: ComponentProps<'pre'>) {
+  const child = Children.toArray(children)[0];
+  if (isValidElement<{ className?: string; children?: ReactNode }>(child)) {
+    const language = /language-([\w-]+)/.exec(child.props.className ?? '')?.[1];
+    const text = String(child.props.children ?? '').replace(/\n$/, '');
+    return <HighlightedCode code={text} language={language} />;
+  }
+  return <pre>{children}</pre>;
+}
+
+const markdownComponents = { blockquote: Blockquote, pre: Pre };
+
+function readShowAiPreference(): boolean {
+  try {
+    return localStorage.getItem(AI_PREF_KEY) !== 'off';
+  } catch {
+    return true; // 저장소를 못 쓰는 환경(시크릿 모드 등)에서도 기본값(보임)으로 동작한다.
+  }
+}
+
+function Markdown({ children }: { children: string }) {
+  return (
+    <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
+      {children}
+    </ReactMarkdown>
+  );
+}
+
 export function NotesView({ chapter }: { chapter: Chapter }) {
   const loader = notes[`./notes/${chapter.id}.md`];
   const [loaded, setLoaded] = useState<{ id: string; sections: Section[] } | null>(null);
+  const [showAi, setShowAi] = useState(readShowAiPreference);
   const sections = loaded?.id === chapter.id ? loaded.sections : null;
 
   useEffect(() => {
@@ -61,19 +132,36 @@ export function NotesView({ chapter }: { chapter: Chapter }) {
     return <p className="status-text">불러오는 중...</p>;
   }
 
+  const aiCount = sections.reduce((sum, section) => sum + (section.body.match(/^> \*\*AI 코멘트\*\*/gm)?.length ?? 0), 0);
+
+  function toggleAi(next: boolean) {
+    setShowAi(next);
+    try {
+      localStorage.setItem(AI_PREF_KEY, next ? 'on' : 'off');
+    } catch {
+      // 저장하지 못해도 이번 화면에서는 선택이 적용된다.
+    }
+  }
+
   return (
-    <div className="notes-view">
+    <div className={showAi ? 'notes-view' : 'notes-view hide-ai'}>
+      {aiCount > 0 && (
+        <label className="ai-toggle">
+          <input type="checkbox" checked={showAi} onChange={(event) => toggleAi(event.target.checked)} />
+          💬 AI 코멘트 보기 <span className="ai-toggle-count">({aiCount}개)</span>
+        </label>
+      )}
       {sections.map((section, index) =>
         section.title === null ? (
           <div className="notes-intro markdown" key={index}>
-            <ReactMarkdown remarkPlugins={[remarkGfm]}>{section.body}</ReactMarkdown>
+            <Markdown>{section.body}</Markdown>
           </div>
         ) : (
           // 첫 항목만 펼쳐 두고 나머지는 접어 둔다 — 눌러서 펼쳐 보며 공부하는 용도.
           <details className="notes-section" key={index} open={index === 0 || (index === 1 && sections[0].title === null)}>
             <summary>{renderTitle(section.title)}</summary>
             <div className="markdown">
-              <ReactMarkdown remarkPlugins={[remarkGfm]}>{section.body}</ReactMarkdown>
+              <Markdown>{section.body}</Markdown>
             </div>
           </details>
         ),

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { Chapter } from './chapters';
+import { HighlightedCode } from './HighlightedCode';
 
 // 화면에 보여주는 코드는 실제로 실행되는 파일을 그대로 읽어 온다(?raw) — 보여주는 코드와 동작하는 코드가 어긋날 수 없다.
 const sources = import.meta.glob('./chapter_*/*.jsx', { query: '?raw', import: 'default' }) as Record<
@@ -47,9 +48,7 @@ export function CodeView({ chapter }: { chapter: Chapter }) {
           </button>
         ))}
       </div>
-      <pre className="code-block">
-        <code>{code ?? '불러오는 중...'}</code>
-      </pre>
+      <HighlightedCode code={code ?? '불러오는 중...'} language={code === null ? undefined : 'jsx'} lineNumbers={code !== null} />
     </div>
   );
 }
