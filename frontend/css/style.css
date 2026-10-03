@@ -299,6 +299,13 @@ button:disabled {
   z-index: 1;
 }
 
+/* 벽 삼각 선반 — 모양은 game.js에서 clip-path로 오려내고, 색은 벽과 같게 한다. */
+.wall-wedge {
+  position: absolute;
+  background: var(--border);
+  z-index: 1;
+}
+
 .spinner-bar {
   position: absolute;
   background: linear-gradient(90deg, var(--danger), var(--accent));

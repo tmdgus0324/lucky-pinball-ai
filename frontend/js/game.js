@@ -33,6 +33,10 @@ const CLASSIC_GALTON_MAP = {
   pinwheelBarLength: 100,
   pinwheelBarThickness: 10,
   pinwheelAngularSpeed: 0.05,
+  // 핀휠 행(4/8/12/16) 사이의 행마다 양쪽 벽에 삼각 선반을 붙인다 — 벽을 타고 내려오는 빈
+  // 통로를 막는다 (devhelp/36 참고, frontend-react/src/game/engine.ts와 동일).
+  wedgeRowIndices: [2, 6, 10, 14, 18],
+  wedgeSize: 40, // 벽 안쪽 면에서 중앙으로 튀어나오는 폭 = 높이(45° 경사)
   zoomStartY: 340 + 5 * 50, // 못 5행을 통과한 뒤부터 카메라 추적 시작 (startY 변경에 맞춰 같이 조정)
 };
 
@@ -61,6 +65,14 @@ class MatterAdapter {
 
   addStaticRect(cx, cy, width, height, angle = 0, restitution = 0) {
     const body = Matter.Bodies.rectangle(cx, cy, width, height, { isStatic: true, angle, restitution, friction: 0 });
+    Matter.World.add(this.world, body);
+    return body;
+  }
+
+  // 볼록 다각형(꼭짓점은 씬 좌표). fromVertices는 넘긴 좌표를 무게중심으로 삼으므로 중심을 직접 구해서 준다.
+  addStaticPolygon(vertices, restitution = 0) {
+    const centre = Matter.Vertices.centre(vertices);
+    const body = Matter.Bodies.fromVertices(centre.x, centre.y, [vertices], { isStatic: true, restitution, friction: 0 });
     Matter.World.add(this.world, body);
     return body;
   }
@@ -172,8 +184,67 @@ const WALL_RESTITUTION = 0.7;
 // 그래서 검증된 50으로 되돌렸다(devhelp/31, 확인 방식은 devhelp/25와 동일).
 const PINWHEEL_WALL_CLEARANCE = 50;
 
+const WALL_THICKNESS = 16;
+
+// 벽 선반(wedge) 설계 규칙 — devhelp/25·31의 실패 경험에서 뽑은 것(devhelp/36):
+//  R1. 장애물끼리(또는 장애물과 벽) 틈은 0(접촉)이거나 이 값 이상이어야 한다. 그 사이의 좁은
+//      틈은 공이 끼는 함정이 된다(30·15는 실패, 50·63·70은 통과). 선반 팁에 이 값보다 가까운
+//      못은 아예 배치하지 않는다.
+//  R2. 선반 윗면은 중앙 쪽으로 내려가는 경사(벽과의 각 135°)라 오목한 웅덩이가 생기지 않는다.
+const MIN_OBSTACLE_GAP = 50;
+
+function buildWedgeSpecs(cfg) {
+  const specs = [];
+  const half = cfg.wedgeSize / 2;
+  const embed = 4; // 벽 쪽 두 꼭짓점을 벽 안으로 파묻어 이음새 틈을 없앤다
+
+  cfg.wedgeRowIndices.forEach((rowIndex) => {
+    const y = cfg.pegField.startY + rowIndex * cfg.pegField.rowSpacing;
+    const { left, right } = playableBoundsAtY(y, cfg);
+    const innerLeft = left + WALL_THICKNESS / 2; // 벽 중심선 + 반 두께 = 벽 안쪽 면
+    const innerRight = right - WALL_THICKNESS / 2;
+
+    // 꼭대기가 벽에 붙고 아래쪽 끝(팁)이 중앙 쪽으로 튀어나온다 — 윗면이 중앙으로 내려가는 45° 경사.
+    specs.push({
+      vertices: [
+        { x: innerLeft - embed, y: y - half },
+        { x: innerLeft, y: y - half },
+        { x: innerLeft + cfg.wedgeSize, y: y + half },
+        { x: innerLeft - embed, y: y + half },
+      ],
+    });
+    specs.push({
+      vertices: [
+        { x: innerRight + embed, y: y - half },
+        { x: innerRight, y: y - half },
+        { x: innerRight - cfg.wedgeSize, y: y + half },
+        { x: innerRight + embed, y: y + half },
+      ],
+    });
+  });
+  return specs;
+}
+
+function distanceToSegment(px, py, ax, ay, bx, by) {
+  const abx = bx - ax;
+  const aby = by - ay;
+  const t = Math.max(0, Math.min(1, ((px - ax) * abx + (py - ay) * aby) / (abx * abx + aby * aby)));
+  return Math.hypot(px - (ax + t * abx), py - (ay + t * aby));
+}
+
+function distanceToPolygon(px, py, vertices) {
+  let min = Infinity;
+  for (let i = 0; i < vertices.length; i++) {
+    const a = vertices[i];
+    const b = vertices[(i + 1) % vertices.length];
+    min = Math.min(min, distanceToSegment(px, py, a.x, a.y, b.x, b.y));
+  }
+  return min;
+}
+
 function buildPegPositions(cfg) {
-  const { rows, colSpacing, rowSpacing, startY } = cfg.pegField;
+  const { rows, colSpacing, rowSpacing, startY, pegRadius } = cfg.pegField;
+  const wedges = buildWedgeSpecs(cfg);
   const pegs = [];
   for (let row = 0; row < rows; row++) {
     if (cfg.pinwheelRowIndices.includes(row)) continue; // 이 행들은 못 대신 핀휠이 차지한다
@@ -181,6 +252,9 @@ function buildPegPositions(cfg) {
     const offset = row % 2 === 1 ? colSpacing / 2 : 0;
     const { left, right } = playableBoundsAtY(y, cfg);
     for (let x = left + PEG_WALL_CLEARANCE + offset; x <= right - PEG_WALL_CLEARANCE; x += colSpacing) {
+      // R1: 선반 표면과의 틈이 MIN_OBSTACLE_GAP보다 좁아지는 못은 두지 않는다.
+      const tooCloseToWedge = wedges.some((w) => distanceToPolygon(x, y, w.vertices) - pegRadius < MIN_OBSTACLE_GAP);
+      if (tooCloseToWedge) continue;
       pegs.push({ x, y });
     }
   }
@@ -302,6 +376,28 @@ function renderWallVisual(sceneEl, x1, y1, x2, y2, thickness) {
   sceneEl.appendChild(el);
 }
 
+function renderWedgeVisual(sceneEl, spec) {
+  const xs = spec.vertices.map((v) => v.x);
+  const ys = spec.vertices.map((v) => v.y);
+  const minX = Math.min(...xs);
+  const minY = Math.min(...ys);
+  const width = Math.max(...xs) - minX;
+  const height = Math.max(...ys) - minY;
+  // 꼭짓점을 요소 크기 기준 퍼센트로 바꿔 clip-path로 오려낸다(물리 바디와 같은 모양).
+  const points = spec.vertices
+    .map((v) => `${(((v.x - minX) / width) * 100).toFixed(2)}% ${(((v.y - minY) / height) * 100).toFixed(2)}%`)
+    .join(', ');
+
+  const el = document.createElement('div');
+  el.className = 'wall-wedge';
+  el.style.left = minX + 'px';
+  el.style.top = minY + 'px';
+  el.style.width = width + 'px';
+  el.style.height = height + 'px';
+  el.style.clipPath = `polygon(${points})`;
+  sceneEl.appendChild(el);
+}
+
 function renderPinwheelVisual(sceneEl, pos, cfg) {
   const el = document.createElement('div');
   el.className = 'spinner-bar';
@@ -327,7 +423,7 @@ function buildBoard(adapter, sceneEl, cfg) {
     return { body, el };
   });
 
-  const wallThickness = 16;
+  const wallThickness = WALL_THICKNESS;
   const bottom = cfg.boardHeight;
   const rightMargin = cfg.funnelBottomMargin;
 
@@ -342,6 +438,12 @@ function buildBoard(adapter, sceneEl, cfg) {
   const rightAngle = Math.atan2(bottom, -rightMargin);
   adapter.addStaticRect(cfg.boardWidth - rightMargin / 2, bottom / 2, rightLen, wallThickness, rightAngle, WALL_RESTITUTION);
   renderWallVisual(sceneEl, cfg.boardWidth, 0, cfg.boardWidth - rightMargin, bottom, wallThickness);
+
+  // 벽 삼각 선반 — 벽과 같은 반발력. 벽을 타고 내려오던 공이 윗면(중앙 쪽 경사)에 닿아 안쪽으로 밀려난다.
+  buildWedgeSpecs(cfg).forEach((spec) => {
+    adapter.addStaticPolygon(spec.vertices, WALL_RESTITUTION);
+    renderWedgeVisual(sceneEl, spec);
+  });
 
   // 바닥: 완주 후 구슬이 자연스럽게 멈춰 쌓이는 용도.
   adapter.addStaticRect(cfg.boardWidth / 2, bottom + 8, cfg.boardWidth, 16, 0);
