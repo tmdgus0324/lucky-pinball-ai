@@ -213,14 +213,26 @@ class AiHealthServiceTest {
     }
 
     @Test
-    void missingApiKeyIsReportedWithoutLeakingAnythingElse() {
+    void missingApiKeyIsToldApartFromAWrongKey() {
+        // SDK는 키가 없어도 예외 없이 인증 없는 요청을 보내고 Anthropic이 401을 돌려준다(실제 동작). 그 401을
+        // "키가 틀렸다(AUTH_FAILED)"로 안내하면 관리자가 키를 새로 발급받는 등 엉뚱한 조치를 하게 된다.
         System.clearProperty("anthropic.apiKey");
-        // 개발자 PC에 ANTHROPIC_API_KEY 환경변수가 있으면 이 상황을 만들 수 없다.
-        Assumptions.assumeTrue(System.getenv("ANTHROPIC_API_KEY") == null);
+        // 개발자 PC에 키 환경변수가 있으면 이 상황을 만들 수 없다(CI에서는 실행된다).
+        Assumptions.assumeTrue(System.getenv("ANTHROPIC_API_KEY") == null && System.getenv("ANTHROPIC_AUTH_TOKEN") == null);
+        respondWith(401, error("authentication_error", "x-api-key header is required"), 0);
 
         AiHealthResult result = service(5, true).check();
 
         assertEquals("KEY_MISSING", result.status());
+        assertEquals(401, result.upstreamStatus());
+        assertTrue(result.message().contains("ANTHROPIC_API_KEY"));
+    }
+
+    @Test
+    void aConfiguredButRejectedKeyIsStillAuthFailed() {
+        respondWith(401, error("authentication_error", "invalid x-api-key"), 0);   // setUp에서 apiKey 프로퍼티를 설정해 둠
+
+        assertEquals("AUTH_FAILED", service(5, true).check().status());
     }
 
     @Test

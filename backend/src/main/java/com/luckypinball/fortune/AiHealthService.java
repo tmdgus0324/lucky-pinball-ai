@@ -3,6 +3,7 @@ package com.luckypinball.fortune;
 import com.anthropic.errors.AnthropicException;
 import com.anthropic.errors.AnthropicIoException;
 import com.anthropic.errors.AnthropicServiceException;
+import com.anthropic.errors.NoCredentialsException;
 import com.anthropic.errors.PermissionDeniedException;
 import com.anthropic.errors.RateLimitException;
 import com.anthropic.errors.UnauthorizedException;
@@ -87,10 +88,11 @@ public class AiHealthService {
     }
 
     private AiHealthResult classify(RuntimeException e, long elapsed) {
-        // client() 생성 단계에서 실패 — 서버에 API 키가 없는 경우.
-        if (e instanceof ApiException) {
-            return result(false, "KEY_MISSING",
-                    "API 클라이언트를 만들 수 없습니다. 서버의 ANTHROPIC_API_KEY 환경변수가 설정됐는지 확인하세요.", null, elapsed);
+        // 서버에 API 키가 없는 경우. 처음엔 클라이언트 생성이 실패할 거라고 가정했지만, 실제로 SDK는 키가 없어도
+        // 예외 없이 인증 없는 요청을 보내 Anthropic에게 401을 받는다(CI에서 발견, 실험으로 확인). 그래서 401 처리 쪽에서
+        // "키가 아예 없는 경우"를 따로 구분한다. 여기는 SDK가 직접 자격 증명 없음을 알리거나 생성이 실패하는 경우용 안전망이다.
+        if (e instanceof NoCredentialsException || e instanceof ApiException) {
+            return keyMissing(null, elapsed);
         }
         if (e instanceof AnthropicIoException) {
             return isTimeout(e)
@@ -102,6 +104,10 @@ public class AiHealthService {
         if (e instanceof AnthropicServiceException service) {
             int code = service.statusCode();
             if (e instanceof UnauthorizedException || e instanceof PermissionDeniedException) {
+                // 키가 설정돼 있지 않은데 401이면 "키가 틀렸다"가 아니라 "키가 없다"다 — 조치가 완전히 다르다.
+                if (!generator.apiKeyConfigured()) {
+                    return keyMissing(code, elapsed);
+                }
                 return result(false, "AUTH_FAILED",
                         "API 키가 유효하지 않거나 권한이 없습니다. 키가 폐기·오타·만료되지 않았는지 확인하세요.", code, elapsed);
             }
@@ -124,6 +130,11 @@ public class AiHealthService {
             return result(false, "ERROR", "응답을 처리하지 못했습니다. 서버 로그를 확인하세요.", null, elapsed);
         }
         return result(false, "ERROR", "점검 중 예상하지 못한 오류가 났습니다. 서버 로그를 확인하세요.", null, elapsed);
+    }
+
+    private AiHealthResult keyMissing(Integer upstreamStatus, long elapsed) {
+        return result(false, "KEY_MISSING",
+                "서버에 API 키가 설정되어 있지 않습니다. 서버의 ANTHROPIC_API_KEY 환경변수를 확인하세요.", upstreamStatus, elapsed);
     }
 
     private static boolean isTimeout(Throwable e) {

@@ -134,6 +134,8 @@ class ClaudeFortuneGeneratorTest {
         System.clearProperty("anthropic.apiKey");
         // 환경변수에도 키가 없는 CI에서만 의미가 있다 — 개발자 PC에 ANTHROPIC_API_KEY가 있으면 이 시나리오를 만들 수 없다.
         org.junit.jupiter.api.Assumptions.assumeTrue(System.getenv("ANTHROPIC_API_KEY") == null);
+        // 키가 없으면 SDK는 인증 없는 요청을 보내고 Anthropic이 401을 돌려준다(실제 동작).
+        respondWith(401, "{\"type\":\"error\",\"error\":{\"type\":\"authentication_error\",\"message\":\"x-api-key header is required\"}}", 0);
 
         ApiException e = analyzeAndCatch(new ClaudeFortuneGenerator(5, 0));
 

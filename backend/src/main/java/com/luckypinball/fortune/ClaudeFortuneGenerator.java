@@ -130,6 +130,22 @@ public class ClaudeFortuneGenerator implements FortuneService {
         return MODEL;
     }
 
+    /**
+     * 서버에 API 키(또는 인증 토큰)가 설정돼 있는지 — SDK가 읽는 시스템 프로퍼티/환경변수 기준.
+     * SDK는 키가 없어도 예외를 던지지 않고 인증 없이 요청을 보내 401을 받기 때문에(실험으로 확인),
+     * "401인데 키 자체가 없다"를 구분하려면 이쪽에서 확인해야 한다.
+     */
+    public boolean apiKeyConfigured() {
+        return hasText(System.getProperty("anthropic.apiKey"))
+                || hasText(System.getenv("ANTHROPIC_API_KEY"))
+                || hasText(System.getProperty("anthropic.authToken"))
+                || hasText(System.getenv("ANTHROPIC_AUTH_TOKEN"));
+    }
+
+    private static boolean hasText(String value) {
+        return value != null && !value.isBlank();
+    }
+
     public long timeoutSeconds() {
         return timeout.toSeconds();
     }
