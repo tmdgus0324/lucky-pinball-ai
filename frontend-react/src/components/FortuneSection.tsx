@@ -118,7 +118,12 @@ export function FortuneSection({ players, quickAddIds, onFortunesReady }: Fortun
                     {fortune.fortuneScore}
                     <span style={{ fontSize: 12, color: 'var(--muted)' }}>점</span>
                   </div>
-                  <div className="message">"{fortune.fortuneMessage}"</div>
+                  {fortune.source === 'FALLBACK' ? (
+                    // AI 호출 실패로 받은 임시 점수 — 운세 문구 대신 그 사실을 그대로 알린다(재시도하려면 "운세 확인"을 다시).
+                    <div className="message fallback-notice">⚠ {fortune.fortuneMessage}</div>
+                  ) : (
+                    <div className="message">"{fortune.fortuneMessage}"</div>
+                  )}
                 </>
               )}
               {startLine && <div className="start-line">{startLine}</div>}

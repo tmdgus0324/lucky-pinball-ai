@@ -94,7 +94,7 @@ export interface Buff {
   startY: number;
 }
 
-export type FortuneSource = 'AI' | 'CACHE' | 'NONE';
+export type FortuneSource = 'AI' | 'CACHE' | 'FALLBACK' | 'NONE';
 
 export interface FortuneResponse {
   playerId: number;

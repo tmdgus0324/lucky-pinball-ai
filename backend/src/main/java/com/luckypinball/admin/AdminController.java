@@ -83,7 +83,9 @@ public class AdminController {
                 ? FortuneResultEntity.SOURCE_AI
                 : history.stream().anyMatch(h -> FortuneResultEntity.SOURCE_CACHE.equals(h.source()))
                         ? FortuneResultEntity.SOURCE_CACHE
-                        : null;
+                        : history.stream().anyMatch(h -> FortuneResultEntity.SOURCE_FALLBACK.equals(h.source()))
+                                ? FortuneResultEntity.SOURCE_FALLBACK
+                                : null;
         return new PlayerAdminView(player.getId(), player.getName(), player.getBirthDate(), history, fortuneSource);
     }
 
@@ -96,7 +98,7 @@ public class AdminController {
         }
     }
 
-    /** fortuneSource: "AI"(AI 호출한 적 있음) | "CACHE"(기존 데이터만 사용) | null(아직 운세를 확인한 적 없음). */
+    /** fortuneSource: "AI"(AI 호출한 적 있음) | "CACHE"(기존 데이터만 사용) | "FALLBACK"(AI 실패로 임시 점수만 받음) | null(아직 운세를 확인한 적 없음). */
     public record PlayerAdminView(Long playerId, String name, LocalDate birthDate, List<FortuneHistoryEntry> fortuneHistory, String fortuneSource) {
     }
 

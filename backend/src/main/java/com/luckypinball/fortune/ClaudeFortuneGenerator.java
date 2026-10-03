@@ -2,7 +2,9 @@ package com.luckypinball.fortune;
 
 import com.anthropic.client.AnthropicClient;
 import com.anthropic.client.okhttp.AnthropicOkHttpClient;
-import com.anthropic.errors.AnthropicServiceException;
+import com.anthropic.errors.AnthropicException;
+import com.anthropic.errors.AnthropicIoException;
+import com.anthropic.errors.RateLimitException;
 import com.anthropic.models.messages.MessageCreateParams;
 import com.anthropic.models.messages.StructuredMessage;
 import com.anthropic.models.messages.StructuredMessageCreateParams;
@@ -10,11 +12,14 @@ import com.anthropic.models.messages.StructuredTextBlock;
 import com.fasterxml.jackson.annotation.JsonClassDescription;
 import com.fasterxml.jackson.annotation.JsonPropertyDescription;
 import com.luckypinball.common.ApiException;
+import java.io.InterruptedIOException;
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.format.TextStyle;
 import java.util.Locale;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
@@ -35,7 +40,10 @@ public class ClaudeFortuneGenerator implements FortuneService {
 
     private static final String MODEL = "claude-haiku-4-5";
 
-    private static final String UPSTREAM_FAILURE_MESSAGE = "AI 운세 서비스에 일시적인 문제가 있습니다. 잠시 후 다시 시도해주세요.";
+    // 사용자 응답에는 실패 유형별 일반 문구만 싣는다. 원인(응답 코드, 예외 체인)은 cause로 넘겨 로그에만 남는다.
+    static final String UPSTREAM_FAILURE_MESSAGE = "AI 운세 서비스에 일시적인 문제가 있습니다. 잠시 후 다시 시도해주세요.";
+    static final String TIMEOUT_MESSAGE = "AI 응답이 늦어지고 있습니다. 잠시 후 다시 시도해주세요.";
+    static final String BUSY_MESSAGE = "AI 서비스에 요청이 몰려 있습니다. 잠시 후 다시 시도해주세요.";
 
     private static final String[] ZODIAC = {
             "원숭이띠", "닭띠", "개띠", "돼지띠", "쥐띠", "소띠", "호랑이띠", "토끼띠", "용띠", "뱀띠", "말띠", "양띠"
@@ -56,12 +64,26 @@ public class ClaudeFortuneGenerator implements FortuneService {
     ) {
     }
 
+    private final Duration timeout;
+    private final int maxRetries;
+
+    /**
+     * SDK 기본값은 요청 타임아웃 10분, 재시도 2회라서 Claude가 멈추면 서블릿 스레드 하나가 최대 수십 분을
+     * 붙잡힌다(타임아웃·연결 오류도 재시도 대상). 평소 응답이 4초 안팎이라 10초 + 재시도 1회로 줄여서
+     * 최악의 대기를 약 20초로 묶는다.
+     */
+    public ClaudeFortuneGenerator(@Value("${anthropic.timeout-seconds:10}") long timeoutSeconds,
+                                   @Value("${anthropic.max-retries:1}") int maxRetries) {
+        this.timeout = Duration.ofSeconds(timeoutSeconds);
+        this.maxRetries = maxRetries;
+    }
+
     private AnthropicClient client;
 
     private synchronized AnthropicClient client() {
         if (client == null) {
             try {
-                client = AnthropicOkHttpClient.fromEnv();
+                client = AnthropicOkHttpClient.builder().fromEnv().timeout(timeout).maxRetries(maxRetries).build();
             } catch (RuntimeException e) {
                 // 환경변수 이름 같은 서버 설정을 사용자 응답에 싣지 않는다. 원인(키 없음)은 cause로 넘겨서
                 // GlobalExceptionHandler의 ERROR 로그("Caused by")에서 확인한다.
@@ -88,6 +110,27 @@ public class ClaudeFortuneGenerator implements FortuneService {
             // 보이면 환경변수를 빠뜨린 것이라 로그로는 남긴다.
             log.warn("ANTHROPIC_API_KEY 미설정 — 서버는 정상 기동하지만 실제 운세 조회 시 실패합니다");
         }
+    }
+
+    /** Claude 호출 실패를 사용자에게 의미 있는 상태 코드로 나눈다: 타임아웃 504, 요청 과다(429) 503, 그 외 502. */
+    static ApiException translate(AnthropicException e) {
+        if (e instanceof AnthropicIoException && isTimeout(e)) {
+            return ApiException.upstreamTimeout(TIMEOUT_MESSAGE, e);
+        }
+        if (e instanceof RateLimitException) {
+            return ApiException.upstreamUnavailable(BUSY_MESSAGE, e);
+        }
+        return ApiException.upstreamFailure(UPSTREAM_FAILURE_MESSAGE, e);
+    }
+
+    /** 읽기/연결/전체 호출 타임아웃은 모두 InterruptedIOException(SocketTimeoutException 포함)으로 올라온다. */
+    private static boolean isTimeout(Throwable e) {
+        for (Throwable t = e; t != null; t = t.getCause()) {
+            if (t instanceof InterruptedIOException) {
+                return true;
+            }
+        }
+        return false;
     }
 
     @Override
@@ -127,10 +170,10 @@ public class ClaudeFortuneGenerator implements FortuneService {
                     .orElseThrow(() -> ApiException.upstreamFailure("Claude가 운세 결과를 반환하지 않았습니다."));
             // 이름·생년월일이 담긴 프롬프트와 응답 본문은 남기지 않는다 — 호출 사실과 걸린 시간만.
             log.info("Claude 호출 완료: model={} {}ms", MODEL, System.currentTimeMillis() - startedAt);
-        } catch (AnthropicServiceException e) {
-            // Claude의 원문 오류(예: "API key is invalid")는 사용자 응답에 싣지 않고, 원인으로만 넘긴다 —
-            // GlobalExceptionHandler가 남기는 ERROR 로그에 "Caused by"로 실제 응답 코드가 보인다.
-            throw ApiException.upstreamFailure(UPSTREAM_FAILURE_MESSAGE, e);
+        } catch (AnthropicException e) {
+            // 응답 코드뿐 아니라 타임아웃·연결 오류·응답 파싱 실패까지 전부 여기서 잡는다(이전엔 서비스 오류만
+            // 잡아서 나머지는 500으로 떨어졌다). Claude의 원문 오류는 사용자 응답에 싣지 않고 원인으로만 넘긴다.
+            throw translate(e);
         }
 
         // AI 응답값이 프롬프트에 적힌 범위를 벗어나더라도(모델이 완벽히 지시를 따르지 않을 수 있음)

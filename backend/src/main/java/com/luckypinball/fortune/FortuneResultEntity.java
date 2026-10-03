@@ -19,6 +19,8 @@ public class FortuneResultEntity {
 
     public static final String SOURCE_AI = "AI";
     public static final String SOURCE_CACHE = "CACHE";
+    /** AI 호출이 실패해서 규칙 기반(MockFortuneGenerator)으로 대신 만든 임시 점수. 캐시로 재사용하지 않는다. */
+    public static final String SOURCE_FALLBACK = "FALLBACK";
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

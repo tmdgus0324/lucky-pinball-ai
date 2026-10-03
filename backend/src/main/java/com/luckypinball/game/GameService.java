@@ -132,7 +132,7 @@ public class GameService {
     }
 
     private GameParticipant toParticipant(Long playerId) {
-        FortuneQueryResult fortune = fortuneQueryService.getTodayFortune(playerId);
+        FortuneQueryResult fortune = fortuneQueryService.getFortuneForGame(playerId);
         return new GameParticipant(
                 fortune.playerId(), fortune.name(), fortune.fortuneScore(),
                 fortune.luckyNumber(), fortune.fortuneMessage(), fortune.buff());

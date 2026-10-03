@@ -31,6 +31,18 @@ logging:
   pattern:
     level: "%5p [%X{traceId:--------}]"
 
+# Claude 호출 제한. SDK 기본값(타임아웃 10분, 재시도 2회)이면 Claude가 멈췄을 때 요청 하나가 수십 분을
+# 붙잡히므로 줄였다. 평소 응답이 4초 안팎이라 10초 + 재시도 1회(최악 약 20초). 환경변수
+# ANTHROPIC_TIMEOUT_SECONDS / ANTHROPIC_MAX_RETRIES로 덮어쓸 수 있다.
+anthropic:
+  timeout-seconds: 10
+  max-retries: 1
+
+# AI 호출이 실패하면 오류로 끝내지 않고 임시 점수(FALLBACK)로 진행한다(데모가 API 장애·크레딧 소진으로
+# 멈추지 않게). false로 끄면 실패가 그대로 오류 응답(504/503/502)으로 나간다.
+fortune:
+  fallback-enabled: true
+
 admin:
   username: ${ADMIN_USERNAME:admin}
   # 기본값을 빈 문자열로 둔 이유: 비워두면 로그인이 항상 실패하게 만들어서(AdminAuthController

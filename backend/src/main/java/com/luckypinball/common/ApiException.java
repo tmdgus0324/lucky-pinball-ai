@@ -46,6 +46,16 @@ public class ApiException extends RuntimeException {
         return new ApiException(HttpStatus.BAD_GATEWAY, message, cause);
     }
 
+    /** 외부 서비스가 제한 시간 안에 응답하지 않았을 때(504). */
+    public static ApiException upstreamTimeout(String message, Throwable cause) {
+        return new ApiException(HttpStatus.GATEWAY_TIMEOUT, message, cause);
+    }
+
+    /** 외부 서비스가 요청 과다 등으로 잠시 받아주지 못할 때(503). */
+    public static ApiException upstreamUnavailable(String message, Throwable cause) {
+        return new ApiException(HttpStatus.SERVICE_UNAVAILABLE, message, cause);
+    }
+
     public HttpStatus getStatus() {
         return status;
     }

@@ -4,6 +4,12 @@ import { Pagination } from './Pagination';
 
 const PAGE_SIZE = 20;
 
+const SOURCE_LABELS: Record<string, string> = {
+  AI: 'AI 호출',
+  CACHE: '기존 데이터',
+  FALLBACK: '임시 점수(AI 실패)',
+};
+
 interface PlayersTableProps {
   /** 401(로그인 만료/무효)을 받으면 로그인 화면으로 돌려보내는 콜백. */
   onUnauthorized: () => void;
@@ -78,12 +84,12 @@ export function PlayersTable({ onUnauthorized }: PlayersTableProps) {
                 <td>{player.name}</td>
                 <td>{player.birthDate || '미입력'}</td>
                 <td>
-                  {player.fortuneSource === 'AI' ? 'Y' : player.fortuneSource === 'CACHE' ? 'N' : '-'}
+                  {player.fortuneSource === 'AI' ? 'Y' : player.fortuneSource === 'CACHE' ? 'N' : player.fortuneSource === 'FALLBACK' ? '임시' : '-'}
                 </td>
                 <td>
                   {player.fortuneHistory.length
                     ? player.fortuneHistory
-                        .map((h) => `${h.createdDate} · ${h.fortuneScore} · ${h.source === 'AI' ? 'AI 호출' : '기존 데이터'}`)
+                        .map((h) => `${h.createdDate} · ${h.fortuneScore} · ${SOURCE_LABELS[h.source] ?? h.source}`)
                         .join('  →  ')
                     : '이력 없음'}
                 </td>
