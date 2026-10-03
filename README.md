@@ -61,3 +61,11 @@ devhelp/         구현 과정과 트러블슈팅 기록
 - 모바일에서 운세 결과 카드 텍스트가 길면 잘리는 문제 보완
 
 자세한 계획은 [`plan/05_improvement-backlog.md`](./plan/05_improvement-backlog.md)에 정리해뒀습니다.
+
+## 출처와 참고
+
+- 게임 방식(결승선 통과 순서 경쟁)과 회전 막대 장애물 아이디어는 lazygyu의 [Marble Roulette](https://lazygyu.github.io/roulette/)([lazygyu/roulette](https://github.com/lazygyu/roulette), MIT 라이선스)에서 영감을 받았습니다.
+- 물리와 맵은 Matter.js로 직접 구현했습니다. 맵 구조(갈톤보드), 장애물 크기·배치·회전 속도 등 모든 수치와 코드는 이 프로젝트에서 새로 작성했고, 원본의 코드·맵 데이터·이미지는 사용하지 않았습니다.
+- AI 운세 분석, 상대평가 버프, 캐시 구조는 이 프로젝트의 독자 기능입니다.
+- "Marble Roulette"와 "마블 룰렛"은 lazygyu의 상표이며, 이 프로젝트는 원작자와 제휴·후원 관계가 없는 개인 포트폴리오 프로젝트입니다.
+- 물리 엔진 [Matter.js](https://brm.io/matter-js/)는 MIT 라이선스입니다.
