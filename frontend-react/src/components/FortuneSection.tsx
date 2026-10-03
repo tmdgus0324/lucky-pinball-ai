@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { api, type FortuneResponse, type Player } from '../api/client';
 import { computeRelativeGap } from '../utils/relativeBuff';
+import { BallDot } from './BallDot';
 
 /** "3칸 아래에서 출발" 같은 한 줄 요약. 버프 티어·AI/캐시 출처 같은 내부 정보는 참가자
  * 화면에서는 빼고(관리자 화면의 "AI 호출 Y/N" 컬럼에 그대로 남아있다), 실제로 어디서
@@ -88,7 +89,10 @@ export function FortuneSection({ players, quickAddIds, onFortunesReady }: Fortun
         {checked &&
           quickPlayers.map((player) => (
             <div className="fortune-card tier-quick" key={player.playerId}>
-              <div className="name">{player.name}</div>
+              <div className="name">
+                <BallDot index={players.indexOf(player)} />
+                {player.name}
+              </div>
               <div className="message">🎲 무작위로 배정된 시작 높이 — 게임에서만 확인할 수 있습니다</div>
             </div>
           ))}
@@ -102,7 +106,10 @@ export function FortuneSection({ players, quickAddIds, onFortunesReady }: Fortun
               : describeStart(computeRelativeGap(fortune.fortuneScore, maxScoreInGroup));
           return (
             <div className={`fortune-card tier-${fortune.buff.tier}`} key={fortune.playerId}>
-              <div className="name">{player ? player.name : fortune.playerId}</div>
+              <div className="name">
+                {player && <BallDot index={players.indexOf(player)} />}
+                {player ? player.name : fortune.playerId}
+              </div>
               {fortune.source === 'NONE' ? (
                 <div className="message">생년월일을 입력하지 않아 운세 없이 참여합니다</div>
               ) : (

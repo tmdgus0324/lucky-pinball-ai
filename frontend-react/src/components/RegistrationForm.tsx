@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { api, type Player } from '../api/client';
+import { BallDot } from './BallDot';
 import { parseBirthDateShorthand } from '../utils/birthDate';
 import { randomBirthDateIso, randomKoreanName } from '../utils/aiTest';
 
@@ -225,7 +226,7 @@ export function RegistrationForm({ players, onRegistered, onQuickAdd, onRemove, 
           value={birthInput}
           onChange={(e) => setBirthInput(e.target.value)}
         />
-        <button type="submit" disabled={busy}>
+        <button type="submit" className="secondary" disabled={busy}>
           참가자 등록
         </button>
         <button type="button" className="secondary" disabled={busy} onClick={handleAiTest}>
@@ -241,8 +242,9 @@ export function RegistrationForm({ players, onRegistered, onQuickAdd, onRemove, 
       </p>
 
       <div className="player-list">
-        {players.map((player) => (
+        {players.map((player, index) => (
           <span className="player-chip" key={player.playerId}>
+            <BallDot index={index} />
             {player.name} · {player.birthDate || '생년월일 미입력'}{' '}
             <button type="button" className="remove" onClick={() => onRemove(player.playerId)}>
               ✕

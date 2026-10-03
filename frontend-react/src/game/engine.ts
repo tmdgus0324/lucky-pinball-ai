@@ -10,6 +10,7 @@
  */
 import * as Matter from 'matter-js';
 import type { GameParticipant } from '../api/client';
+import { ballColorAt } from './ballColors';
 
 interface MapConfig {
   id: string;
@@ -516,21 +517,36 @@ function buildBoard(adapter: MatterAdapter, sceneEl: HTMLElement, cfg: MapConfig
   return spinners;
 }
 
-function createBallEl(sceneEl: HTMLElement, name: string, colorIndex: number): HTMLDivElement {
-  const palette = ['#6b7280', '#4ade80', '#38bdf8', '#a78bfa', '#ffd166', '#f472b6', '#fb923c', '#22d3ee'];
+function createBallEl(sceneEl: HTMLElement, name: string, color: string): HTMLDivElement {
   const el = document.createElement('div');
   el.className = 'ball';
-  el.style.background = palette[colorIndex % palette.length];
+  el.style.background = color;
   el.textContent = name;
   sceneEl.appendChild(el);
   return el;
 }
 
-interface FinishedEntry {
-  name: string;
+/** 순위 패널 이름 앞에 붙는, 공과 같은 색의 작은 점(등록 목록·운세 카드의 BallDot과 같은 모양). */
+function createBallDot(color: string, colorName: string): HTMLSpanElement {
+  const dot = document.createElement('span');
+  dot.className = 'ball-dot';
+  dot.style.background = color;
+  dot.title = `${colorName} 공`;
+  return dot;
 }
 
-function renderRankPanel(rankListEl: HTMLElement, finishedEntries: FinishedEntry[], pendingNames: Set<string>) {
+interface FinishedEntry {
+  name: string;
+  color: string;
+  colorName: string;
+}
+
+interface PendingEntry {
+  color: string;
+  colorName: string;
+}
+
+function renderRankPanel(rankListEl: HTMLElement, finishedEntries: FinishedEntry[], pendingNames: Map<string, PendingEntry>) {
   rankListEl.innerHTML = '';
   const total = finishedEntries.length + pendingNames.size;
 
@@ -544,18 +560,20 @@ function renderRankPanel(rankListEl: HTMLElement, finishedEntries: FinishedEntry
     position.className = 'position';
     position.textContent = String(index + 1);
     item.appendChild(position);
-    item.append(' ' + entry.name);
+    item.appendChild(createBallDot(entry.color, entry.colorName));
+    item.append(entry.name);
     rankListEl.appendChild(item);
   });
 
-  pendingNames.forEach((name) => {
+  pendingNames.forEach((entry, name) => {
     const item = document.createElement('div');
     item.className = 'rank-item pending';
     const position = document.createElement('span');
     position.className = 'position';
     position.textContent = '?';
     item.appendChild(position);
-    item.append(` ${name} (진행 중)`);
+    item.appendChild(createBallDot(entry.color, entry.colorName));
+    item.append(`${name} (진행 중)`);
     rankListEl.appendChild(item);
   });
 
@@ -567,6 +585,8 @@ function renderRankPanel(rankListEl: HTMLElement, finishedEntries: FinishedEntry
 interface BallState {
   playerId: number;
   name: string;
+  color: string;
+  colorName: string;
   body: Matter.Body;
   el: HTMLDivElement;
   finished: boolean;
@@ -598,22 +618,26 @@ export function runPinballGame({ boardEl, rankListEl, participants, onComplete }
     const spinners = buildBoard(adapter, sceneEl, cfg);
 
     const ballStates: BallState[] = [];
-    const pendingNames = new Set<string>();
+    const pendingNames = new Map<string, PendingEntry>();
 
     participants.forEach((participant, index) => {
       const x = spawnX(index, participants.length, cfg);
       const y = spawnY(participant.buff.startY);
       const body = adapter.addBall(x, y, cfg.ballRadius, cfg.restitution);
-      const el = createBallEl(sceneEl, participant.name, index);
+      // 공 색은 참가자 순서로 정해진다 — 등록 목록·운세 카드의 BallDot(같은 index)과 같은 색이다.
+      const { hex: color, name: colorName } = ballColorAt(index);
+      const el = createBallEl(sceneEl, participant.name, color);
       ballStates.push({
         playerId: participant.playerId,
         name: participant.name,
+        color,
+        colorName,
         body,
         el,
         finished: false,
         stallTicks: 0,
       });
-      pendingNames.add(participant.name);
+      pendingNames.set(participant.name, { color, colorName });
     });
 
     const finishOrder: number[] = [];
@@ -639,7 +663,7 @@ export function runPinballGame({ boardEl, rankListEl, participants, onComplete }
             state.finished = true;
             state.el.classList.add('finished');
             finishOrder.push(state.playerId);
-            finishedEntries.push({ name: state.name });
+            finishedEntries.push({ name: state.name, color: state.color, colorName: state.colorName });
             pendingNames.delete(state.name);
             renderRankPanel(rankListEl, finishedEntries, pendingNames);
           } else {
