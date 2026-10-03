@@ -110,24 +110,22 @@ export function GamePage() {
       />
 
       <section className="panel">
-        <h2>3. 게임 진행 — 가장 늦게 도착한 사람이 당첨!</h2>
-        <p className="desc">아래 맵을 굴러 내려가 결승선에 가장 마지막에 도착한 참가자가 당첨자입니다.</p>
-
-        <div className="actions-row">
+        <div className="panel-head">
+          <h2>3. 게임 진행 — 가장 늦게 도착한 사람이 당첨!</h2>
           <button type="button" disabled={!fortunesReady || starting} onClick={handleStartGame}>
             게임 시작
           </button>
         </div>
+        <p className="desc">아래 맵을 굴러 내려가 결승선에 가장 마지막에 도착한 참가자가 당첨자입니다.</p>
         <p className={`status-text${gameStatus.error ? ' error' : ''}`}>{gameStatus.text}</p>
 
         <PinballBoard
           key={game ? game.gameId : 'preview'}
           participants={game ? game.participants : []}
           onComplete={handleGameComplete}
+          overlay={result ? <ResultBanner key={result.gameId} result={result} /> : null}
         />
       </section>
-
-      {result && <ResultBanner result={result} />}
     </>
   );
 }

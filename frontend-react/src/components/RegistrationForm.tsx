@@ -1,4 +1,4 @@
-import { useRef, useState, type FormEvent } from 'react';
+import { useState, type FormEvent } from 'react';
 import { api, type Player } from '../api/client';
 import { parseBirthDateShorthand } from '../utils/birthDate';
 import { randomBirthDateIso, randomKoreanName } from '../utils/aiTest';
@@ -21,7 +21,6 @@ export function RegistrationForm({ players, onRegistered, onQuickAdd, onRemove, 
   const [quickAdding, setQuickAdding] = useState(false);
   const [aiTesting, setAiTesting] = useState(false);
   const [dbTesting, setDbTesting] = useState(false);
-  const quickAddSeq = useRef(1);
 
   const remainingSlots = 8 - players.length;
   const busy = quickAdding || aiTesting || dbTesting;
@@ -31,9 +30,16 @@ export function RegistrationForm({ players, onRegistered, onQuickAdd, onRemove, 
     setStatus({ text: '', error: false });
     const count = Math.min(quickCount, remainingSlots);
     const added: Player[] = [];
+    // "1번, 2번, ..."을 현재 목록에 없는 가장 작은 번호부터 채운다 — 전체 초기화 뒤에는 항상 1번부터
+    // 나가고, 이미 1·2번이 있으면 3번부터 이어진다. 한 판에 같은 이름이 둘 생기면 엔진의 대기 목록
+    // (pendingNames, 이름 기준 Set)과 순위 패널이 틀어지므로 번호를 매번 1부터 리셋하지는 않는다.
+    const usedNames = new Set(players.map((p) => p.name));
+    let seq = 1;
     try {
       for (let i = 0; i < count; i++) {
-        const guestName = `게스트${quickAddSeq.current++}`;
+        while (usedNames.has(`${seq}번`)) seq++;
+        const guestName = `${seq}번`;
+        usedNames.add(guestName);
         // eslint-disable-next-line no-await-in-loop
         const player = await api.registerPlayer(guestName, null);
         added.push(player);

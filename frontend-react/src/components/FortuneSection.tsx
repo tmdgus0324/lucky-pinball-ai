@@ -76,14 +76,13 @@ export function FortuneSection({ players, quickAddIds, onFortunesReady }: Fortun
 
   return (
     <section className="panel">
-      <h2>2. 오늘의 운세 — 좋을수록 더 높은 곳에서 출발!</h2>
-      <p className="desc">운세가 좋을수록 더 높은 곳에서, 안 좋을수록 결승선 가까이에서 출발합니다.</p>
-
-      <div className="actions-row">
+      <div className="panel-head">
+        <h2>2. 오늘의 운세 — 좋을수록 더 높은 곳에서 출발!</h2>
         <button type="button" disabled={!canCheck || checking} onClick={handleCheckFortune}>
           운세 확인
         </button>
       </div>
+      <p className="desc">운세가 좋을수록 더 높은 곳에서, 안 좋을수록 결승선 가까이에서 출발합니다.</p>
       <p className={`status-text${status.error ? ' error' : ''}`}>{status.text}</p>
       <div className="fortune-grid" style={{ marginTop: 14 }}>
         {checked &&
