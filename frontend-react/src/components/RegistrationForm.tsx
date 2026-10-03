@@ -250,7 +250,7 @@ export function RegistrationForm({ players, onRegistered, onQuickAdd, onRemove, 
           </span>
         ))}
       </div>
-      <div className="actions-row" style={{ marginTop: 6 }}>
+      <div className="actions-row spread" style={{ marginTop: 6 }}>
         <p className={`status-text${status.error ? ' error' : ''}`} style={{ margin: 0 }}>
           {status.text || `${players.length}/8명 등록됨`}
         </p>

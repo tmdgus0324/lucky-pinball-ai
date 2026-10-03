@@ -290,6 +290,15 @@ button:disabled {
   flex-wrap: wrap;
 }
 
+/* 상태 문구는 왼쪽, 버튼은 오른쪽 끝에 — 줄이 접혀도 버튼은 오른쪽에 남는다. */
+.actions-row.spread {
+  align-items: center;
+}
+
+.actions-row.spread button {
+  margin-left: auto;
+}
+
 /* --- 운세 카드 --- */
 .fortune-grid {
   display: grid;
