@@ -741,3 +741,348 @@ table.admin-table th {
   font-size: 12px;
   margin: 0 6px;
 }
+
+/* --- 사이드바: 공부하기 그룹 --- */
+.sidebar nav.tabs .nav-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.sidebar nav.tabs .nav-group-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  background: transparent;
+  color: var(--muted);
+  text-align: left;
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  font-size: 13.5px;
+  font-weight: 400;
+}
+
+.sidebar nav.tabs .nav-group-toggle.active {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.sidebar nav.tabs .nav-sub {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-left: 14px;
+}
+
+.sidebar nav.tabs .nav-sub a {
+  font-size: 13px;
+}
+
+@media (max-width: 720px) {
+  /* 모바일은 메뉴가 가로 한 줄이라, 그룹 껍데기를 없애고 "공부하기"와 하위 메뉴를 같은 줄에 칩처럼 늘어놓는다. */
+  .sidebar nav.tabs {
+    flex-wrap: wrap;
+  }
+  .sidebar nav.tabs .nav-group,
+  .sidebar nav.tabs .nav-sub {
+    display: contents;
+  }
+  .sidebar nav.tabs .nav-group-toggle {
+    width: auto;
+    gap: 6px;
+  }
+}
+
+/* --- 공부하기 --- */
+.study-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 14px;
+  margin-bottom: 20px;
+}
+
+.study-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 16px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  text-decoration: none;
+}
+
+.study-card:hover {
+  border-color: var(--accent-2);
+}
+
+.study-card h3 {
+  margin: 0;
+  font-size: 16px;
+}
+
+.study-card p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  word-break: keep-all;
+}
+
+.study-card-no {
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.study-keywords {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: auto;
+  padding-top: 6px;
+}
+
+.study-source {
+  color: var(--muted);
+  font-size: 12.5px;
+  word-break: keep-all;
+}
+
+.study-source a,
+.study-crumb a {
+  color: var(--accent);
+}
+
+.study-crumb {
+  margin: 0 0 6px !important;
+  font-size: 12.5px !important;
+}
+
+.study-tabs {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+
+.study-tab {
+  background: var(--panel);
+  color: var(--muted);
+  border: 1px solid var(--border);
+  padding: 8px 18px;
+  font-weight: 600;
+}
+
+.study-tab.active {
+  background: var(--accent);
+  color: var(--bg);
+  border-color: var(--accent);
+}
+
+/* 예제는 원래 흰 배경 페이지에서 만든 것이라 흰 상자 안에서 보여준다(원본 모습 그대로, 어두운 테마가 번지지 않게). */
+.study-demo {
+  background: #fff;
+  color: #111;
+  color-scheme: light;
+  border-radius: 10px;
+  padding: 16px;
+  max-height: 480px;
+  overflow: auto;
+  font-family: system-ui, "Malgun Gothic", sans-serif;
+}
+
+/* 앱 전체 버튼/입력창 스타일이 예제에 번지지 않게, 이 상자 안에서는 브라우저 기본 모양으로 되돌린다. */
+.study-demo button,
+.study-demo input,
+.study-demo textarea,
+.study-demo select {
+  all: revert;
+}
+
+/* 14장 예제는 화면 전체(100vw × 100vh)를 쓰도록 만들어져 있어서, 상자 크기에 맞춰 줄인다. */
+.study-demo [style*="100vw"] {
+  width: 100% !important;
+  height: 320px !important;
+}
+
+.console-panel {
+  margin-top: 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.console-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 12px;
+  background: var(--panel-2);
+  color: var(--muted);
+  font-size: 12.5px;
+}
+
+.console-head button {
+  padding: 4px 10px;
+  font-size: 12px;
+}
+
+.console-lines {
+  max-height: 200px;
+  overflow: auto;
+  padding: 10px 12px;
+  background: #0b0d11;
+  font-family: Consolas, "D2Coding", monospace;
+  font-size: 12.5px;
+  color: #cfe3cf;
+}
+
+.console-empty {
+  color: var(--muted);
+}
+
+.code-view .file-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.file-tab {
+  background: var(--panel-2);
+  color: var(--muted);
+  border: 1px solid var(--border);
+  padding: 6px 12px;
+  font-size: 12.5px;
+  font-weight: 500;
+}
+
+.file-tab.active {
+  color: var(--text);
+  border-color: var(--accent-2);
+}
+
+.code-block {
+  margin: 0;
+  padding: 14px;
+  background: #0b0d11;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: auto;
+  max-height: 560px;
+  font-family: Consolas, "D2Coding", monospace;
+  font-size: 12.5px;
+  line-height: 1.6;
+  tab-size: 4;
+}
+
+.study-pager {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 4px;
+  font-size: 13.5px;
+}
+
+.study-pager a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+/* --- 정리(노트) --- */
+.notes-section {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  margin-bottom: 10px;
+  background: var(--panel-2);
+}
+
+.notes-section > summary {
+  cursor: pointer;
+  padding: 12px 14px;
+  font-weight: 600;
+  font-size: 14.5px;
+}
+
+.notes-section > .markdown {
+  padding: 0 16px 14px;
+}
+
+.notes-intro {
+  margin-bottom: 14px;
+}
+
+.markdown {
+  font-size: 14px;
+  line-height: 1.7;
+  word-break: keep-all;
+}
+
+.markdown h3 {
+  font-size: 15px;
+  margin: 18px 0 6px;
+}
+
+.markdown p {
+  margin: 8px 0;
+}
+
+.markdown ul,
+.markdown ol {
+  padding-left: 22px;
+}
+
+.markdown code {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 1px 5px;
+  font-family: Consolas, "D2Coding", monospace;
+  font-size: 12.5px;
+}
+
+.markdown pre {
+  background: #0b0d11;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+  overflow: auto;
+}
+
+.markdown pre code {
+  background: none;
+  border: none;
+  padding: 0;
+}
+
+.markdown blockquote {
+  margin: 10px 0;
+  padding: 4px 14px;
+  border-left: 3px solid var(--accent-2);
+  color: var(--muted);
+}
+
+.markdown table {
+  border-collapse: collapse;
+  display: block;
+  overflow-x: auto;
+}
+
+.markdown th,
+.markdown td {
+  border: 1px solid var(--border);
+  padding: 6px 10px;
+  text-align: left;
+}
+
+.notes-section > summary code {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 1px 5px;
+  font-family: Consolas, "D2Coding", monospace;
+  font-size: 13px;
+  font-weight: 500;
+}

@@ -1,6 +1,8 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
   "plugins": ["react", "typescript", "oxc"],
+  // 공부하기에 복사해 온 예제(chapter_*)는 학습 당시 코드를 그대로 보여주는 용도라 린트로 고치지 않는다.
+  "ignorePatterns": ["src/study/react/chapter_*/**"],
   "rules": {
     "react/rules-of-hooks": "error",
     "react/only-export-components": ["warn", { "allowConstantExport": true }]
