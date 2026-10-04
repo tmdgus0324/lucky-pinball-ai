@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { api, isUnauthorizedError, type AdminPlayer } from '../api/client';
 import { Pagination } from './Pagination';
+import { usePagination } from '../hooks/usePagination';
 
 const PAGE_SIZE = 20;
 
@@ -18,7 +19,6 @@ interface PlayersTableProps {
 export function PlayersTable({ onUnauthorized }: PlayersTableProps) {
   const [players, setPlayers] = useState<AdminPlayer[] | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [page, setPage] = useState(1);
 
   useEffect(() => {
     api
@@ -34,16 +34,7 @@ export function PlayersTable({ onUnauthorized }: PlayersTableProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const totalPages = useMemo(
-    () => (players ? Math.max(1, Math.ceil(players.length / PAGE_SIZE)) : 1),
-    [players],
-  );
-
-  const pageItems = useMemo(() => {
-    if (!players) return [];
-    const start = (page - 1) * PAGE_SIZE;
-    return players.slice(start, start + PAGE_SIZE);
-  }, [players, page]);
+  const { page, totalPages, pageItems, setPage } = usePagination(players, PAGE_SIZE);
 
   return (
     <section className="panel">

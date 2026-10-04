@@ -1,5 +1,9 @@
 import { useEffect, useState } from 'react';
 import { api, isUnauthorizedError, type AdminGame } from '../api/client';
+import { Pagination } from './Pagination';
+import { usePagination } from '../hooks/usePagination';
+
+const PAGE_SIZE = 20;
 
 interface GamesTableProps {
   onUnauthorized: () => void;
@@ -12,7 +16,8 @@ export function GamesTable({ onUnauthorized }: GamesTableProps) {
   useEffect(() => {
     api
       .adminGetGames()
-      .then(setGames)
+      // 서버 목록은 정렬이 정해져 있지 않아서(최신 게임이 맨 아래로 가곤 했다) 참가자 목록처럼 최신순으로 맞춘다.
+      .then((list) => setGames([...list].sort((a, b) => b.createdAt.localeCompare(a.createdAt))))
       .catch((err: Error) => {
         if (isUnauthorizedError(err)) {
           onUnauthorized();
@@ -22,6 +27,8 @@ export function GamesTable({ onUnauthorized }: GamesTableProps) {
       });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const { page, totalPages, pageItems, setPage } = usePagination(games, PAGE_SIZE);
 
   return (
     <section className="panel">
@@ -54,7 +61,7 @@ export function GamesTable({ onUnauthorized }: GamesTableProps) {
             </tr>
           )}
           {!error &&
-            games?.map((game) => (
+            pageItems.map((game) => (
               <tr key={game.gameId}>
                 <td>{game.gameId}</td>
                 <td>{game.selectedName || '(진행 중)'}</td>
@@ -64,6 +71,7 @@ export function GamesTable({ onUnauthorized }: GamesTableProps) {
             ))}
         </tbody>
       </table>
+      <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
     </section>
   );
 }

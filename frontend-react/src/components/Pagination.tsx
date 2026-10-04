@@ -8,7 +8,12 @@ interface PaginationProps {
 export function Pagination({ page, totalPages, onPageChange }: PaginationProps) {
   if (totalPages <= 1) return null;
 
-  const pages = Array.from({ length: totalPages }, (_, i) => i + 1);
+  // 게임·오류 로그가 쌓이면 페이지가 수십 개가 되므로, 처음·끝 번호와 현재 페이지 앞뒤 2개만 보여준다.
+  const shown = new Set([1, totalPages]);
+  for (let p = page - 2; p <= page + 2; p++) {
+    if (p >= 1 && p <= totalPages) shown.add(p);
+  }
+  const pages = [...shown].sort((a, b) => a - b);
 
   return (
     <div className="pagination">
@@ -18,15 +23,13 @@ export function Pagination({ page, totalPages, onPageChange }: PaginationProps) 
       <button type="button" disabled={page <= 1} onClick={() => onPageChange(page - 1)}>
         이전
       </button>
-      {pages.map((p) => (
-        <button
-          key={p}
-          type="button"
-          className={p === page ? 'active' : ''}
-          onClick={() => onPageChange(p)}
-        >
-          {p}
-        </button>
+      {pages.map((p, index) => (
+        <span key={p} className="page-group">
+          {index > 0 && p - pages[index - 1] > 1 && <span className="page-gap">…</span>}
+          <button type="button" className={p === page ? 'active' : ''} onClick={() => onPageChange(p)}>
+            {p}
+          </button>
+        </span>
       ))}
       <button type="button" disabled={page >= totalPages} onClick={() => onPageChange(page + 1)}>
         다음

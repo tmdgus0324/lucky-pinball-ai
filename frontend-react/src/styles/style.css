@@ -718,6 +718,17 @@ table.admin-table th {
   font-weight: 600;
 }
 
+.pagination .page-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pagination .page-gap {
+  color: var(--muted);
+  font-size: 12.5px;
+}
+
 .pagination button.active {
   background: var(--accent);
   color: var(--bg);

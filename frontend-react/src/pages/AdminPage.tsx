@@ -30,7 +30,7 @@ export function AdminPage() {
     <>
       <header className="top">
         <h2>🛠 관리자 화면</h2>
-        <div className="actions-row">
+        <div className="actions-row spread">
           <p style={{ margin: 0 }}>참가자 · 게임 · 오류 로그 조회와 AI 연결 확인.</p>
           <button type="button" className="secondary" onClick={handleLogout}>
             로그아웃
