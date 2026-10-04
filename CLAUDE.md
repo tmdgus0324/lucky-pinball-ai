@@ -6,14 +6,14 @@ AI Lucky Pinball — 참가자의 운세를 Claude API로 분석해 버프(시�
 
 | 폴더              | 내용                                                                              |
 | ----------------- | --------------------------------------------------------------------------------- |
-| `backend/`        | Java 17, Spring Boot 4, Gradle, H2(파일 DB `backend/data/`), Anthropic Java SDK   |
+| `backend/`        | Java 17, Spring Boot 4, Gradle, Anthropic Java SDK. DB는 로컬 H2(파일 DB `backend/data/`), 운영 Neon PostgreSQL |
 | `frontend-react/` | React 19 + TypeScript + Vite, Matter.js — **현재 주력 프론트엔드**                |
 | `frontend/`       | 기존 Vanilla HTML/CSS/JS 버전 — React 마이그레이션 7단계(교체) 전까지 병행 유지   |
 | `plan/`           | 처음 설계할 때의 계획 문서 (MVP 기준이라 지금과 다른 부분이 있음, 보존용). 각 문서 맨 위 AI 코멘트에 계획과 실제 비교, `07`은 다음 프로젝트 계획 가이드 |
 | `devdocs/`        | **지금 코드 기준** 설명서 — 아키텍처, API 명세, DB 스키마, 알려진 한계, 테스트 전략 |
 | `devhelp/`        | 작업 기록과 트러블슈팅 — 주제별 12개 문서(`README.md`에 목차와 옛 번호 대응표)   |
 
-백엔드 패키지는 도메인별로 나뉜다: `player`, `fortune`, `game`, `admin`, `common`(예외·에러 로그), `config`(CORS).
+백엔드 패키지는 도메인별로 나뉜다: `player`, `fortune`, `game`, `admin`, `common`(추적 ID·요청 제한 필터, 예외·오류 로그, 키별 잠금), `config`(CORS).
 
 ## 실행 · 빌드 · 테스트
 
@@ -22,6 +22,7 @@ AI Lucky Pinball — 참가자의 운세를 Claude API로 분석해 버프(시�
 cd backend
 ./gradlew bootRun          # ANTHROPIC_API_KEY 환경변수 필요 (없으면 생년월일 없는 참가자만 가능)
 ./gradlew test
+env -u ANTHROPIC_API_KEY -u ANTHROPIC_AUTH_TOKEN ./gradlew cleanTest test   # CI와 같은 조건(키 없음)으로도 확인 — 키가 있으면 2개가 스킵된다
 ./gradlew build
 
 # React 프론트 (http://localhost:5173)
@@ -38,13 +39,15 @@ node --check js/main.js    # 빌드 도구가 없으므로 문법 검사는 이�
 
 ## 반드시 지킬 것
 
-- **Claude API는 비용이 든다.** 운세는 `이름+생년월일` 기준으로 DB에 영구 캐시되며, 관리자 화면에서 `AI`/`CACHE`로 구분된다. 캐시를 우회하거나 테스트에서 실제 API를 호출하는 코드를 만들지 않는다. 단위 테스트는 `MockFortuneGenerator`(스프링 빈 아님)를 쓴다.
+- **Claude API는 비용이 든다.** 운세는 `이름+생년월일` 기준으로 DB에 영구 캐시되며, 관리자 화면에서 `AI`/`CACHE`(Claude 실패 시 임시 점수는 `FALLBACK`, 캐시에 넣지 않음)로 구분된다. 캐시를 우회하거나 테스트에서 실제 API를 호출하는 코드를 만들지 않는다. 테스트는 `MockFortuneGenerator`(스프링 빈 아님), 가짜 `FortuneService`, JDK `HttpServer`로 띄운 가짜 Claude 서버를 쓴다(`devdocs/05`).
 - **인터페이스 기반 교체 지점을 유지한다** — `FortuneService`, `GameRepository`, `PlayerJpaRepository`, `MatterAdapter`, `PinballMapConfig`. 호출부가 구현체에 직접 의존하게 바꾸지 않는다. 이 설계가 프로젝트의 핵심 포트폴리오 포인트다.
 - **에러는 `ApiException`을 던지고 `GlobalExceptionHandler`에 맡긴다.** 핸들러가 `ErrorLogStore`에 쌓아 `/api/admin/logs`로 조회되므로, 컨트롤러마다 따로 try/catch·로깅을 넣지 않는다.
 - **물리 엔진 코드는 React 밖에 둔다.** `frontend-react/src/game/engine.ts`는 명령형으로 DOM을 직접 갱신하고, `PinballBoard`는 `useRef`/`useEffect`로 감싸기만 한다. 공 위치를 React state로 옮기지 않는다 (이유: `plan/06` 2번 항목).
-- **물리 튜닝은 신중히.** 벽 끼임·즉시 낙하 같은 버그를 어렵게 잡은 이력이 있다 (`devhelp/02`의 구 09·11·25절). 맵·충돌 값을 바꾸면 여러 번 실제로 플레이해서 확인한다. 특히 `PEG_WALL_CLEARANCE`(70)는 줄이면 공이 영구히 끼는 버그가 재발한다(실측으로 두 번 확인) — 벽 통로 문제는 `WALL_RESTITUTION`으로 다룬다. 또 `pegField.startY`는 공 최대 시작 위치(`20 + 최대 startY 260`)보다 60px 이상 아래여야 한다(`devhelp/03(구 26)`).
+- **물리 튜닝은 신중히.** 벽 끼임·즉시 낙하 같은 버그를 어렵게 잡은 이력이 있다 (`devhelp/02`의 구 09·11·25·36절). 장애물끼리(또는 장애물과 벽)의 틈은 0이거나 `MIN_OBSTACLE_GAP`(50) 이상이어야 한다(구 36). 맵·충돌 값을 바꾸면 여러 번 실제로 플레이해서 확인한다. 특히 `PEG_WALL_CLEARANCE`(70)는 줄이면 공이 영구히 끼는 버그가 재발한다(실측으로 두 번 확인) — 벽 통로 문제는 `WALL_RESTITUTION`으로 다룬다. 또 `pegField.startY`는 공 최대 시작 위치(`20 + 최대 startY 260`)보다 60px 이상 아래여야 한다(`devhelp/03(구 26)`).
 - **`frontend-react/src/game/engine.ts`와 `frontend/js/game.js`는 같은 물리 로직의 두 사본이다.** 맵·물리·카메라 값을 바꾸면 둘 다 같이 고친다.
 - **버프(시작 높이)는 이번 판 참가자끼리의 상대평가다.** 최고점자 대비 점수 차이 × 공 지름(26px), 차이는 최대 10점(`devhelp/03(구 26)`). 실제 계산은 `GameService.applyRelativeStartY`(`BuffCalculator.relativeStartY`)이고, 2번 섹션 미리보기(`utils/relativeBuff.ts`, 레거시 `frontend/js/main.js`)는 같은 공식을 복제한 것이라 상수(10, 26)를 바꾸면 세 곳을 같이 고친다.
+- **방문자 IP는 앞단 Cloudflare가 넣는 `True-Client-IP`(환경변수 `CLIENT_IP_HEADER`)로만 판단한다.** `X-Forwarded-For`의 첫 값은 클라이언트가 마음대로 정할 수 있어 요청 제한이 우회된다(운영에서 실제로 확인, `devhelp/08`). 요청 제한 대상 경로와 한도는 `RateLimitFilter.LIMITS_PER_WINDOW`에 있다.
+- **목록 API에서 참가자마다 따로 조회하지 않는다(N+1).** 운세 이력은 `findAllGroupedByPlayerId()`로 한 번에 읽는다. `PlayerListQueryCountTest`가 참가자 수에 따라 쿼리 수가 늘면 실패한다(`devhelp/07`).
 - **프론트 포트를 추가하면** `backend/.../config/WebConfig.java`의 CORS 허용 목록에도 추가한다. 배포 도메인은 `https://lucky-pinball-ai.vercel.app`.
 - React의 API 주소는 `VITE_API_BASE` 환경변수(없으면 `http://localhost:8080`)를 쓴다. Vanilla `frontend/js/api.js`는 `localhost:8080`이 하드코딩되어 있다.
 - `ANTHROPIC_API_KEY` 등 비밀 값은 코드·문서·커밋에 절대 넣지 않는다.
