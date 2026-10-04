@@ -87,7 +87,7 @@ frontend-react/  React 프론트엔드 (주력)
 frontend/        Vanilla JS 프론트엔드 (기존 버전, 병행 유지)
 devdocs/         현재 기준 설명서 — 아키텍처, API, DB, 한계, 테스트
 devhelp/         구현 기록과 트러블슈팅 — 주제별 12개 문서
-plan/            처음 설계할 때의 계획 문서
+plan/            처음 설계할 때의 계획 문서 + 계획과 실제 비교(AI 코멘트), 다음 프로젝트 계획 가이드
 ```
 
 ## 알려진 한계

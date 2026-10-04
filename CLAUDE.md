@@ -9,7 +9,7 @@ AI Lucky Pinball — 참가자의 운세를 Claude API로 분석해 버프(시�
 | `backend/`        | Java 17, Spring Boot 4, Gradle, H2(파일 DB `backend/data/`), Anthropic Java SDK   |
 | `frontend-react/` | React 19 + TypeScript + Vite, Matter.js — **현재 주력 프론트엔드**                |
 | `frontend/`       | 기존 Vanilla HTML/CSS/JS 버전 — React 마이그레이션 7단계(교체) 전까지 병행 유지   |
-| `plan/`           | 처음 설계할 때의 계획 문서 (MVP 기준이라 지금과 다른 부분이 있음, 보존용)        |
+| `plan/`           | 처음 설계할 때의 계획 문서 (MVP 기준이라 지금과 다른 부분이 있음, 보존용). 각 문서 맨 위 AI 코멘트에 계획과 실제 비교, `07`은 다음 프로젝트 계획 가이드 |
 | `devdocs/`        | **지금 코드 기준** 설명서 — 아키텍처, API 명세, DB 스키마, 알려진 한계, 테스트 전략 |
 | `devhelp/`        | 작업 기록과 트러블슈팅 — 주제별 12개 문서(`README.md`에 목차와 옛 번호 대응표)   |
 
