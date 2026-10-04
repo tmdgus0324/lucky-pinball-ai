@@ -94,7 +94,7 @@ class AdminAuthFilterTest {
     void the401ResponseIncludesCorsHeaderForAllowedOrigin() throws Exception {
         // 이 401은 DispatcherServlet까지 안 가서 WebConfig의 CORS 설정이 안 먹는다 — 직접
         // 헤더를 안 붙이면 브라우저가 401을 읽지 못하고 "Failed to fetch"로 뭉개버린다
-        // (실제로 배포 환경에서 겪은 버그, devhelp/34).
+        // (실제로 배포 환경에서 겪은 버그, devhelp/08(구 34)).
         AdminSessionStore store = new AdminSessionStore();
         AdminAuthFilter filter = new AdminAuthFilter(store);
 

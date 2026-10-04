@@ -157,7 +157,7 @@
 
   // 실제 게임 시작 시 서버(GameService.applyRelativeStartY)가 계산하는 것과 반드시 같은
   // 결과가 나와야 하므로, 두 상수는 backend/.../fortune/BuffCalculator.java와 항상
-  // 일치시켜야 한다(devhelp/26 — frontend-react의 utils/relativeBuff.ts와 동일한 로직).
+  // 일치시켜야 한다(devhelp/03(구 26) — frontend-react의 utils/relativeBuff.ts와 동일한 로직).
   const RELATIVE_GAP_CAP = 10;
   const BALL_DIAMETER_PX = 26;
 

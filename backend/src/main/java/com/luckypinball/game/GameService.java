@@ -53,7 +53,7 @@ public class GameService {
     /**
      * 개별 조회(POST /api/fortune)는 참가자 한 명씩 독립 호출이라 상대평가를 할 수 없다 —
      * 이번 판 전체 참가자의 점수를 다 알 수 있는 지점(게임 생성 시점)에서만 계산 가능하다.
-     * (devhelp/26 참고 — AI 점수가 좁은 범위에 몰려도 시작 높이 차이가 항상 드러나게 함)
+     * (devhelp/03(구 26) 참고 — AI 점수가 좁은 범위에 몰려도 시작 높이 차이가 항상 드러나게 함)
      */
     private List<GameParticipant> applyRelativeStartY(List<GameParticipant> participants) {
         OptionalInt maxScore = participants.stream()

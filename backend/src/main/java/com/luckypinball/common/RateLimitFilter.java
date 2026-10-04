@@ -44,7 +44,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
         Window window = windowsByIp.computeIfAbsent(clientIp(request), key -> new Window());
         if (!window.tryConsume()) {
             // AdminAuthFilter의 401과 같은 이유로 CORS 헤더를 직접 붙여야 한다 — 안 그러면
-            // 브라우저가 429를 "Failed to fetch"로 뭉개버린다(devhelp/34).
+            // 브라우저가 429를 "Failed to fetch"로 뭉개버린다(devhelp/08(구 34)).
             log.warn("요청 제한 초과: ip={} path={}", clientIp(request), request.getRequestURI());
             CorsSupport.applyCorsHeaders(request, response);
             response.setStatus(HttpStatus.TOO_MANY_REQUESTS.value());

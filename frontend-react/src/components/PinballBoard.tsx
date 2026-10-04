@@ -12,7 +12,7 @@ interface PinballBoardProps {
 /**
  * game.js(runPinballGame)를 감싸는 명령형 "섬" — 물리 시뮬레이션 코드 자체는 건드리지
  * 않고, React는 "마운트되면 시작하고 언마운트되면 정리한다"는 경계 역할만 한다.
- * (devhelp/18 StrictMode 이중 실행 항목, devhelp/21 참고)
+ * (devhelp/04(구 18) StrictMode 이중 실행 항목, devhelp/04(구 21) 참고)
  */
 export function PinballBoard({ participants, onComplete, overlay }: PinballBoardProps) {
   const boardRef = useRef<HTMLDivElement>(null);

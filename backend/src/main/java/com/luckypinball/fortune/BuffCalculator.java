@@ -21,7 +21,7 @@ public final class BuffCalculator {
     // 대체된다 — fromScore의 startY는 더 이상 게임에 안 쓰이고, tier만 남아서 쓰인다.)
     private static final double START_Y_PER_POINT = 2.0;
 
-    // 상대평가(devhelp/26): AI 점수가 좁은 범위(예: 72~76점)에 몰려도 시작 높이 차이가
+    // 상대평가(devhelp/03(구 26)): AI 점수가 좁은 범위(예: 72~76점)에 몰려도 시작 높이 차이가
     // 항상 눈에 띄도록, 절대 0~100점이 아니라 "이번 판 참가자 중 최고점자 대비 몇 점 차이인지"로
     // 시작 높이를 다시 계산한다. 차이가 지나치게 크게 벌어지는 걸 막기 위해 10점(=공 10개)에서
     // 잘라낸다.

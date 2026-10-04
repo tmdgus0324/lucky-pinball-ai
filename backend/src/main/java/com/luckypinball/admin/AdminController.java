@@ -19,7 +19,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 /**
  * 관리자 화면 API — 참가자·게임·오류 로그 조회와 AI 연결 확인.
- * /api/admin/** 는 AdminAuthFilter가 로그인 토큰을 확인한다(devhelp/32).
+ * /api/admin/** 는 AdminAuthFilter가 로그인 토큰을 확인한다(devhelp/08(구 32)).
  * (예전에 있던 "가중치 임의 조정" 스텁(501)은 구현하지 않기로 하고 제거했다.)
  */
 @RestController

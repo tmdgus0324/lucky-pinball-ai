@@ -97,7 +97,7 @@ export function RegistrationForm({ players, onRegistered, onQuickAdd, onRemove, 
     try {
       // 관리자 전용 /admin/players 대신 공개 엔드포인트를 쓴다 — 관리자 화면에 로그인이
       // 생기면서, 로그인 안 한 일반 참가자도 쓰는 이 데모 기능까지 막히면 안 되기 때문
-      // (devhelp/32 참고). 출처(AI/CACHE)가 실제로 기록된 신원만 걸러주는 건 이미
+      // (devhelp/08(구 32) 참고). 출처(AI/CACHE)가 실제로 기록된 신원만 걸러주는 건 이미
       // 서버(GET /api/players/reusable)가 해주므로, 여기서는 중복 제거만 한다.
       const existing = await api.getReusablePlayers();
       const seen = new Set<string>();

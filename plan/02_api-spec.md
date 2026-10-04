@@ -35,7 +35,7 @@
 
 ## 2. `POST /api/fortune` — 오늘의 운세 + 버프 조회
 
-`FortuneService`는 이제 `MockFortuneGenerator`가 아니라 **Claude API(Haiku 4.5)** 를 호출하는 `ClaudeFortuneGenerator`가 구현한다 (2026-09-22 변경, `04_pinball-map-design.md`/`devhelp/13` 참고). 게임 방식이 "결승선 통과 순서 경쟁"이라 버프는 **시작 높이(startY)** 한 가지뿐이다 — HP나 충돌 데미지 같은 개념 자체가 없다.
+`FortuneService`는 이제 `MockFortuneGenerator`가 아니라 **Claude API(Haiku 4.5)** 를 호출하는 `ClaudeFortuneGenerator`가 구현한다 (2026-09-22 변경, `04_pinball-map-design.md`/`devhelp/03(구 13)` 참고). 게임 방식이 "결승선 통과 순서 경쟁"이라 버프는 **시작 높이(startY)** 한 가지뿐이다 — HP나 충돌 데미지 같은 개념 자체가 없다.
 
 동작은 참가자의 `birthDate` 유무에 따라 갈린다:
 
@@ -192,4 +192,4 @@ Claude API 연결 확인(출력 1토큰의 실제 호출). 5초 간격 제한(�
 `status`: OK | KEY_MISSING | AUTH_FAILED | CREDIT_EXHAUSTED | RATE_LIMITED | TIMEOUT | UNREACHABLE | UPSTREAM_ERROR | ERROR
 
 ### ~~`POST /api/admin/fortune/override`~~ — **제거됨 (2026-10-04)**
-501을 돌려주던 "가중치 임의 조정" 스텁이었다. 구현하지 않기로 결정하고 서버 API와 관리자 화면(React·레거시)에서 모두 뺐다(`devhelp/47`). 지금 이 주소로 요청하면 404다.
+501을 돌려주던 "가중치 임의 조정" 스텁이었다. 구현하지 않기로 결정하고 서버 API와 관리자 화면(React·레거시)에서 모두 뺐다(`devhelp/08(구 47)`). 지금 이 주소로 요청하면 404다.

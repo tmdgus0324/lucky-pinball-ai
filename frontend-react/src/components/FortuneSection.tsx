@@ -27,7 +27,7 @@ export function FortuneSection({ players, quickAddIds, onFortunesReady }: Fortun
   const quickPlayers = players.filter((p) => quickAddIds.has(p.playerId));
   const apiPlayers = players.filter((p) => !quickAddIds.has(p.playerId));
 
-  // 실제 게임 시작 시 서버가 계산할 상대평가와 같은 결과를 미리 보여준다(devhelp/26) —
+  // 실제 게임 시작 시 서버가 계산할 상대평가와 같은 결과를 미리 보여준다(devhelp/03(구 26)) —
   // 생년월일 미입력(NONE) 참가자는 애초에 점수가 없으니 이 비교 대상에서 제외.
   const maxScoreInGroup = useMemo(() => {
     const scores = results

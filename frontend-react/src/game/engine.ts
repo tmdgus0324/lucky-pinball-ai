@@ -1,7 +1,7 @@
 /**
  * 핀볼 맵(클래식 갈톤보드) 렌더링 + 물리 시뮬레이션.
  * frontend/js/game.js를 거의 그대로 옮긴 것 — React는 여기에 DOM 요소만 넘겨주는 얇은
- * 경계 역할만 한다 (devhelp/21 참고). 설계 근거: plan/04_pinball-map-design.md
+ * 경계 역할만 한다 (devhelp/04(구 21) 참고). 설계 근거: plan/04_pinball-map-design.md
  *
  * 물리엔진(Matter.js) 관련 코드는 전부 MatterAdapter 안에 가둬뒀다.
  * 나중에 Box2D 등으로 교체하고 싶어지면, 이 어댑터와 같은 메서드를
@@ -46,9 +46,9 @@ const CLASSIC_GALTON_MAP: MapConfig = {
   name: '클래식 갈톤보드',
   boardWidth: 560,
   boardHeight: 1500,
-  // startY(280)는 devhelp/26에서 상대평가 도입 후 buff.startY 최대값이 200->260으로
+  // startY(280)는 devhelp/03(구 26)에서 상대평가 도입 후 buff.startY 최대값이 200->260으로
   // 커지면서 340으로 올렸다 — spawnY 최대값(20+260=280)과 정확히 같으면 여유가 0이 되어
-  // devhelp/25에서 고친 "공이 못 행과 겹쳐서 끼는" 문제가 재발한다. 60px 여유를 다시 확보.
+  // devhelp/02(구 25)에서 고친 "공이 못 행과 겹쳐서 끼는" 문제가 재발한다. 60px 여유를 다시 확보.
   pegField: { rows: 20, colSpacing: 60, rowSpacing: 50, startY: 340, pegRadius: 7 },
   finishLineY: 1400,
   funnelBottomMargin: 50,
@@ -57,12 +57,12 @@ const CLASSIC_GALTON_MAP: MapConfig = {
   restitution: 0.45,
   // 기존 10행(중간) 한 줄 → 5행/15행 두 줄로 늘렸다가, 두 줄 사이(9행, 450px)가 여전히
   // 완전히 뚫려있어서 4행 간격으로 균등하게 재배치했다 — 통로 전체에서 핀휠과 마주치는
-  // 간격을 일정하게 유지하기 위함 (devhelp/31 참고).
+  // 간격을 일정하게 유지하기 위함 (devhelp/02(구 31) 참고).
   pinwheelRowIndices: [4, 8, 12, 16],
   pinwheelBarLength: 100,
   pinwheelBarThickness: 10,
   pinwheelAngularSpeed: 0.05,
-  // 핀휠 행(4/8/12/16) 사이의 행마다 벽 선반을 둔다 — devhelp/36 참고.
+  // 핀휠 행(4/8/12/16) 사이의 행마다 벽 선반을 둔다 — devhelp/02(구 36) 참고.
   wedgeRowIndices: [2, 6, 10, 14, 18],
   wedgeSize: 40,
   zoomStartY: 340 + 5 * 50, // 못 5행을 통과한 뒤부터 카메라 추적 시작 (startY 변경에 맞춰 같이 조정)
@@ -72,23 +72,23 @@ const CLASSIC_GALTON_MAP: MapConfig = {
 // 그 공이 결승선을 통과하면, 남은 공 중 새로운 1등(=원래 2등)으로 자연스럽게 추적 대상이
 // 넘어간다(매 틱 "완주 안 한 공 중 y가 가장 큰 것"을 다시 찾을 뿐이라 별도 상태 관리가 필요 없다).
 // 낙하 초반(zoomStartY 이전)에는 8개 공이 한꺼번에 엎치락뒤치락해 카메라가 계속 흔들리므로
-// 그 구간은 확대하지 않고 넓은 시야를 유지한다(devhelp/12에서 겪은 문제의 재발 방지).
+// 그 구간은 확대하지 않고 넓은 시야를 유지한다(devhelp/02(구 12)에서 겪은 문제의 재발 방지).
 const ZOOM_SCALE = 1.3;
 
 // 못을 벽에 너무 가깝게 두면, 벽과 못 사이의 좁은 틈에 공이 반복적으로 끼었다 빠지기를
 // 되풀이하며 "덜컹거리며 내려오는" 부자연스러운 움직임이 생긴다(실제 테스트로 확인됨,
-// devhelp/11 참고). 그래서 벽 근처에는 못을 아예 배치하지 않는 여유 구간을 넉넉히 둔다.
+// devhelp/02(구 11) 참고). 그래서 벽 근처에는 못을 아예 배치하지 않는 여유 구간을 넉넉히 둔다.
 //
-// devhelp/25에서 이 값을 30까지 줄여서(벽에 지그재그/돌기를 붙여 빈 통로를 메우려는
+// devhelp/02(구 25)에서 이 값을 30까지 줄여서(벽에 지그재그/돌기를 붙여 빈 통로를 메우려는
 // 시도) 8명 플레이 중 2개의 공이 영영 못 빠져나오는 심각한 재발을 두 번(지그재그 버전,
-// 돌기 버전 둘 다) 확인했다 — devhelp/11이 70을 고른 이유가 정확히 이거였다. 새 장애물의
+// 돌기 버전 둘 다) 확인했다 — devhelp/02(구 11)이 70을 고른 이유가 정확히 이거였다. 새 장애물의
 // 모양(뾰족한 지그재그 vs 둥근 돌기) 문제가 아니라, 이 여유 구간 자체를 줄이면 재발한다는
 // 게 두 번의 실측으로 확인됐으므로 값은 70으로 되돌리고, "빈 통로" 문제는 벽 자체의
 // 반발력(restitution)을 높여 다른 방식으로 접근한다(아래 WALL_RESTITUTION).
 const PEG_WALL_CLEARANCE = 70;
 
 // 벽에 맞은 공이 매끄럽게 미끄러지지 않고 안쪽(못 쪽)으로 튕겨 돌아오도록 반발력을 준다.
-// 벽 형태나 여유 구간은 devhelp/11에서 이미 검증된 값 그대로 두고, 반발력만 0(원래 값)에서
+// 벽 형태나 여유 구간은 devhelp/02(구 11)에서 이미 검증된 값 그대로 두고, 반발력만 0(원래 값)에서
 // 올렸다 — 새 장애물을 추가하는 것보다 훨씬 낮은 리스크로 "벽을 따라 끝까지 미끄러지는"
 // 문제를 완화한다.
 const WALL_RESTITUTION = 0.7;
@@ -101,12 +101,12 @@ const WALL_RESTITUTION = 0.7;
 // 이후 "벽에 거의 붙을 정도로" 15까지 줄여봤지만, 5번 중 4번이 120초 안에 못 끝나고
 // 타임아웃됐다(정상은 15~20초) — 회전 장애물도 벽에 너무 가까우면 못과 똑같이 위험하다는
 // 뜻이다. "회전하니까 안전할 것"이라는 가설은 정도의 차이일 뿐 무한정 적용되지 않는다.
-// 그래서 검증된 50으로 되돌렸다(devhelp/31, 확인 방식은 devhelp/25와 동일).
+// 그래서 검증된 50으로 되돌렸다(devhelp/02(구 31), 확인 방식은 devhelp/02(구 25)와 동일).
 const PINWHEEL_WALL_CLEARANCE = 50;
 
 const WALL_THICKNESS = 16;
 
-// 벽 선반(wedge) 설계 규칙 — devhelp/25·31의 실패 경험에서 뽑은 것(devhelp/36):
+// 벽 선반(wedge) 설계 규칙 — devhelp/02(구 25)·31의 실패 경험에서 뽑은 것(devhelp/02(구 36)):
 //  R1. 장애물끼리(또는 장애물과 벽) 틈은 0(접촉)이거나 이 값 이상이어야 한다. 그 사이의 좁은
 //      틈은 공이 끼는 함정이 된다(30·15는 실패, 50·63·70은 통과). 선반 팁에 이 값보다 가까운
 //      못은 아예 배치하지 않는다.
@@ -603,7 +603,7 @@ export interface RunPinballGameOptions {
 /**
  * @returns dispose 함수 — 게임이 끝나기 전에 컴포넌트가 언마운트되는 경우
  * (StrictMode 이중 실행, 라우터 이동 등) 호출해서 물리 엔진을 확실히 정리한다.
- * (devhelp/18의 StrictMode 이중 실행 항목, devhelp/21 참고)
+ * (devhelp/04(구 18)의 StrictMode 이중 실행 항목, devhelp/04(구 21) 참고)
  */
 export function runPinballGame({ boardEl, rankListEl, participants, onComplete }: RunPinballGameOptions): () => void {
   const cfg = CLASSIC_GALTON_MAP;

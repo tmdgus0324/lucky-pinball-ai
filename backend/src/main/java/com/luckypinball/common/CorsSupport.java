@@ -11,7 +11,7 @@ import jakarta.servlet.http.HttpServletResponse;
  * 그런 응답은 DispatcherServlet까지 도달하지 않아서 WebConfig의 addCorsMappings가 적용된
  * 정상 요청과 달리 CORS 응답 헤더가 전혀 안 붙는다 — 브라우저는 이걸 실제 상태 코드(401 등)
  * 대신 그냥 "Failed to fetch"로 뭉뚱그려버려서, 프론트가 에러 메시지조차 못 읽는다
- * (devhelp/34에서 실제로 겪은 문제).
+ * (devhelp/08(구 34)에서 실제로 겪은 문제).
  */
 public final class CorsSupport {
 

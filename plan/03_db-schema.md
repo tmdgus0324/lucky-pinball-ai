@@ -38,4 +38,4 @@ MVP에서는 **H2 파일 기반 DB** 하나만 사용한다 (`backend/data/lucky
 ## 4. 향후 확장 (Phase 2, 지금 설계 안 함)
 - `GAME_RESULT` 테이블 추가.
 - H2 → MySQL 전환 (Spring Data JPA 인터페이스는 그대로 유지, `application.yml` datasource 설정만 교체).
-- (참고) 애초 계획했던 "Redis + 하루 단위 캐시"는 실제로는 `FORTUNE_RESULT` 테이블 기반의 **영구 캐시**로 대체 구현됐다 (`devhelp/13` 참고) — 하루 단위 갱신이 필요해지면 그때 `created_date` 기준으로 조회 조건을 좁히면 된다.
+- (참고) 애초 계획했던 "Redis + 하루 단위 캐시"는 실제로는 `FORTUNE_RESULT` 테이블 기반의 **영구 캐시**로 대체 구현됐다 (`devhelp/03(구 13)` 참고) — 하루 단위 갱신이 필요해지면 그때 `created_date` 기준으로 조회 조건을 좁히면 된다.

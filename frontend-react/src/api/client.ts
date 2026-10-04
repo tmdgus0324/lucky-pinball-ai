@@ -10,7 +10,7 @@ const API_BASE = `${import.meta.env.VITE_API_BASE ?? 'http://localhost:8080'}/ap
 // 프론트(Vercel)·백엔드(Render)가 서로 다른 도메인이라 쿠키 세션보다 훨씬 단순하다.
 // localStorage에 저장해서 새로고침해도 로그인이 유지되게 했다(단, XSS에 뚫리면 토큰도
 // 같이 탈취될 수 있다는 절충 — 이 프로젝트는 innerHTML을 안 쓰고 React가 기본적으로
-// 이스케이프해서 그 위험을 낮춰뒀다, devhelp/29 참고).
+// 이스케이프해서 그 위험을 낮춰뒀다, devhelp/08(구 29) 참고).
 const ADMIN_TOKEN_KEY = 'adminToken';
 
 function getAdminToken(): string | null {
@@ -47,7 +47,7 @@ export class ApiError extends Error {
  * 돌아가야 한다"고 판단하는 데 쓴다. AdminSessionStore가 인메모리라 서버가 재시작되면
  * (슬립→깨어남 포함) 토큰이 서버 쪽에서만 초기화되는데, 브라우저는 예전 토큰을 계속
  * 들고 있어서 "로그인된 화면"처럼 보이면서 실제 조회는 다 실패하는 문제가 있었다
- * (devhelp/34).
+ * (devhelp/08(구 34)).
  */
 export function isUnauthorizedError(error: unknown): boolean {
   return error instanceof ApiError && error.status === 401;
