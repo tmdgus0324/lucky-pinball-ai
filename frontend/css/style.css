@@ -471,19 +471,3 @@ table.admin-table th {
   margin-right: 6px;
 }
 
-.override-form {
-  display: flex;
-  gap: 10px;
-  align-items: center;
-  flex-wrap: wrap;
-}
-
-.override-form input {
-  background: var(--panel-2);
-  border: 1px solid var(--border);
-  color: var(--text);
-  padding: 8px 10px;
-  border-radius: 8px;
-  font-size: 13px;
-  width: 140px;
-}

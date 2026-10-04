@@ -78,11 +78,4 @@ const api = {
   adminGetLogs() {
     return request('/admin/logs', { method: 'GET' });
   },
-
-  adminOverrideFortune(playerId, overrideScore) {
-    return request('/admin/fortune/override', {
-      method: 'POST',
-      body: JSON.stringify({ playerId, overrideScore }),
-    });
-  },
 };

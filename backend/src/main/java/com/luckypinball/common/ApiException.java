@@ -36,10 +36,6 @@ public class ApiException extends RuntimeException {
         return new ApiException(HttpStatus.TOO_MANY_REQUESTS, message);
     }
 
-    public static ApiException notImplemented(String message) {
-        return new ApiException(HttpStatus.NOT_IMPLEMENTED, message);
-    }
-
     /** 우리가 의존하는 외부 서비스(예: Claude API) 호출이 실패했을 때 사용. */
     public static ApiException upstreamFailure(String message) {
         return new ApiException(HttpStatus.BAD_GATEWAY, message);

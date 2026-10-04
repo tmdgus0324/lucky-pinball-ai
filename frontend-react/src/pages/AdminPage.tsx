@@ -5,11 +5,9 @@ import { AiHealthPanel } from '../components/AiHealthPanel';
 import { PlayersTable } from '../components/PlayersTable';
 import { GamesTable } from '../components/GamesTable';
 import { LogList } from '../components/LogList';
-import { OverrideForm } from '../components/OverrideForm';
 
 export function AdminPage() {
   const [loggedIn, setLoggedIn] = useState(api.isAdminLoggedIn());
-  const [logReloadKey, setLogReloadKey] = useState(0);
 
   if (!loggedIn) {
     return <AdminLogin onSuccess={() => setLoggedIn(true)} />;
@@ -33,7 +31,7 @@ export function AdminPage() {
       <header className="top">
         <h2>🛠 관리자 화면</h2>
         <div className="actions-row">
-          <p style={{ margin: 0 }}>참가자 · 게임 · 오류 로그 조회 및 가중치 조정(예정).</p>
+          <p style={{ margin: 0 }}>참가자 · 게임 · 오류 로그 조회와 AI 연결 확인.</p>
           <button type="button" className="secondary" onClick={handleLogout}>
             로그아웃
           </button>
@@ -42,9 +40,8 @@ export function AdminPage() {
 
       <PlayersTable onUnauthorized={handleUnauthorized} />
       <GamesTable onUnauthorized={handleUnauthorized} />
-      <LogList reloadKey={logReloadKey} onUnauthorized={handleUnauthorized} />
+      <LogList onUnauthorized={handleUnauthorized} />
       <AiHealthPanel onUnauthorized={handleUnauthorized} />
-      <OverrideForm onLogged={() => setLogReloadKey((k) => k + 1)} />
     </>
   );
 }

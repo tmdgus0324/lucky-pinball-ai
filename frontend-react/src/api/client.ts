@@ -243,13 +243,6 @@ export const api = {
     return request('/admin/ai-health', { method: 'POST' });
   },
 
-  adminOverrideFortune(playerId: number, overrideScore: number): Promise<void> {
-    return request('/admin/fortune/override', {
-      method: 'POST',
-      body: JSON.stringify({ playerId, overrideScore }),
-    });
-  },
-
   getReusablePlayers(): Promise<ReusablePlayer[]> {
     return request('/players/reusable', { method: 'GET' });
   },

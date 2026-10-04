@@ -62,7 +62,7 @@ devhelp/         구현 과정과 트러블슈팅 기록
 자세한 과정은 [`devhelp/28`](./devhelp/28_배포_검증과_두_버그.md), [`devhelp/29`](./devhelp/29_비용과_보안_방어_Phase1.md) 참고.
 
 **진행 및 보완 예정**
-- 모바일에서 운세 결과 카드 텍스트가 길면 잘리는 문제 보완
+- 관리자 화면 표(참가자·게임 목록)의 좁은 화면 대응
 
 자세한 계획은 [`plan/05_improvement-backlog.md`](./plan/05_improvement-backlog.md)에 정리해뒀습니다.
 

@@ -191,12 +191,5 @@ Claude API 연결 확인(출력 1토큰의 실제 호출). 5초 간격 제한(�
 ```
 `status`: OK | KEY_MISSING | AUTH_FAILED | CREDIT_EXHAUSTED | RATE_LIMITED | TIMEOUT | UNREACHABLE | UPSTREAM_ERROR | ERROR
 
-### `POST /api/admin/fortune/override` — **스텁 (미구현)**
-**Request**
-```json
-{ "playerId": 1, "overrideScore": 90 }
-```
-**Response 501**
-```json
-{ "error": "Not implemented yet — planned for Phase 2" }
-```
+### ~~`POST /api/admin/fortune/override`~~ — **제거됨 (2026-10-04)**
+501을 돌려주던 "가중치 임의 조정" 스텁이었다. 구현하지 않기로 결정하고 서버 API와 관리자 화면(React·레거시)에서 모두 뺐다(`devhelp/47`). 지금 이 주소로 요청하면 404다.

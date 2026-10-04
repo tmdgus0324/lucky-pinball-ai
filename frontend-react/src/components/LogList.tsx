@@ -2,11 +2,10 @@ import { useEffect, useState } from 'react';
 import { api, isUnauthorizedError, type AdminLog } from '../api/client';
 
 interface LogListProps {
-  reloadKey: number;
   onUnauthorized: () => void;
 }
 
-export function LogList({ reloadKey, onUnauthorized }: LogListProps) {
+export function LogList({ onUnauthorized }: LogListProps) {
   const [logs, setLogs] = useState<AdminLog[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -22,7 +21,7 @@ export function LogList({ reloadKey, onUnauthorized }: LogListProps) {
         setError(err.message);
       });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [reloadKey]);
+  }, []);
 
   return (
     <section className="panel">

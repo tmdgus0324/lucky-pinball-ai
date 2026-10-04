@@ -1,6 +1,5 @@
 package com.luckypinball.admin;
 
-import com.luckypinball.common.ApiException;
 import com.luckypinball.common.ErrorLogEntry;
 import com.luckypinball.common.ErrorLogStore;
 import com.luckypinball.fortune.AiHealthResult;
@@ -11,20 +10,17 @@ import com.luckypinball.game.GameRepository;
 import com.luckypinball.game.GameSession;
 import com.luckypinball.player.PlayerEntity;
 import com.luckypinball.player.PlayerJpaRepository;
-import jakarta.validation.constraints.NotNull;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
-import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * 관리자 화면 골격 API — 조회 기능은 실제로 동작하고, 가중치 임의 조정은 스텁(501)이다.
- * 인증 없음(MVP 한정) — 실제 공개 배포 전에는 반드시 최소 인증을 추가해야 한다.
+ * 관리자 화면 API — 참가자·게임·오류 로그 조회와 AI 연결 확인.
+ * /api/admin/** 는 AdminAuthFilter가 로그인 토큰을 확인한다(devhelp/32).
+ * (예전에 있던 "가중치 임의 조정" 스텁(501)은 구현하지 않기로 하고 제거했다.)
  */
 @RestController
 public class AdminController {
@@ -76,12 +72,6 @@ public class AdminController {
         return aiHealthService.check();
     }
 
-    @PostMapping("/api/admin/fortune/override")
-    @ResponseStatus(HttpStatus.NOT_IMPLEMENTED)
-    public void overrideFortune(@RequestBody FortuneOverrideRequest request) {
-        throw ApiException.notImplemented("Not implemented yet — planned for Phase 2");
-    }
-
     private PlayerAdminView toPlayerAdminView(PlayerEntity player) {
         List<FortuneHistoryEntry> history = fortuneResultJpaRepository
                 .findByPlayerIdOrderByCreatedDateAsc(player.getId()).stream()
@@ -101,9 +91,6 @@ public class AdminController {
                                 ? FortuneResultEntity.SOURCE_FALLBACK
                                 : null;
         return new PlayerAdminView(player.getId(), player.getName(), player.getBirthDate(), history, fortuneSource);
-    }
-
-    public record FortuneOverrideRequest(@NotNull Long playerId, @NotNull Integer overrideScore) {
     }
 
     public record FortuneHistoryEntry(int fortuneScore, LocalDate createdDate, String source) {

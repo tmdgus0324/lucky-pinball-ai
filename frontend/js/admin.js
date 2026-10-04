@@ -1,12 +1,10 @@
 /**
- * admin.html 전용 스크립트 — 조회 3종 + 가중치 조정 스텁 호출.
+ * admin.html 전용 스크립트 — 조회 3종(참가자·게임·오류 로그).
  */
 (function () {
   const playersBody = document.getElementById('playersTableBody');
   const gamesBody = document.getElementById('gamesTableBody');
   const logList = document.getElementById('logList');
-  const overrideForm = document.getElementById('overrideForm');
-  const overrideStatus = document.getElementById('overrideStatus');
 
   // 참가자 이름·당첨자 이름은 사용자 입력이라, innerHTML 템플릿에 그대로 넣으면 태그를
   // 심어 스크립트를 실행시킬 수 있다(XSS). 구조는 유지하고 이 값들만 이스케이프한다.
@@ -74,25 +72,6 @@
       logList.innerHTML = `<div class="log-item">불러오기 실패: ${error.message}</div>`;
     }
   }
-
-  overrideForm.addEventListener('submit', async (event) => {
-    event.preventDefault();
-    const playerId = Number(overrideForm.playerId.value);
-    const overrideScore = Number(overrideForm.overrideScore.value);
-
-    overrideStatus.classList.remove('error');
-    overrideStatus.textContent = '요청 중...';
-    try {
-      await api.adminOverrideFortune(playerId, overrideScore);
-      // 501 응답은 api.js에서 에러로 처리되므로 여기 도달하면 실제로 구현된 것 — 지금은 도달할 일이 없음.
-      overrideStatus.textContent = '적용되었습니다.';
-    } catch (error) {
-      overrideStatus.classList.add('error');
-      overrideStatus.textContent =
-        error.status === 501 ? `아직 준비 중인 기능입니다 (${error.message})` : `실패: ${error.message}`;
-      loadLogs();
-    }
-  });
 
   loadPlayers();
   loadGames();
