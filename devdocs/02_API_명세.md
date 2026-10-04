@@ -21,7 +21,7 @@
 | 404 | 없는 참가자·게임, 결과가 아직 없음, 없는 경로 |
 | 405 / 415 | 지원하지 않는 메서드 / Content-Type |
 | 409 | 게임 상태 충돌(결과 중복 보고, 끝난 게임 재시작, 시작 전 결과 보고) |
-| 429 | `/api/fortune` 요청 제한 초과(방문자 IP당 분당 20회, IP는 앞단 Cloudflare가 넣는 `True-Client-IP` 기준), AI 연결 확인 5초 이내 재요청 |
+| 429 | 요청 제한 초과 — `/api/fortune` 방문자 IP당 분당 20회, `/api/admin/login` 분당 10회(IP는 앞단 Cloudflare가 넣는 `True-Client-IP` 기준, 경로별로 따로 셈). AI 연결 확인 5초 이내 재요청 |
 | 500 | 예상하지 못한 서버 오류(메시지는 일반 문구, 원인은 서버 로그) |
 | 502 / 503 / 504 | Claude 실패 / Claude 요청 과다 / Claude 타임아웃 — 기본 설정에서는 임시 점수로 대체되어 거의 나오지 않음 |
 
@@ -88,7 +88,7 @@ DB TEST 버튼용 공개 조회. 운세 결과가 있는(AI·CACHE) 신원만 �
 
 | 메서드·경로 | 설명 |
 |---|---|
-| `POST /api/admin/login` | `{ "username", "password" }` → `{ "token" }` (토큰 불필요). 계정은 환경변수 `ADMIN_USERNAME`/`ADMIN_PASSWORD` |
+| `POST /api/admin/login` | `{ "username", "password" }` → `{ "token" }` (토큰 불필요). 계정은 환경변수 `ADMIN_USERNAME`/`ADMIN_PASSWORD`. IP당 분당 10회까지 시도 가능(초과 시 429) |
 | `POST /api/admin/logout` | 토큰 폐기 → 204 |
 | `GET /api/admin/players` | 참가자 목록(최신순)과 운세 이력, `fortuneSource`(AI > CACHE > FALLBACK > null) |
 | `GET /api/admin/games` | 게임 목록 `{ gameId, selectedName, participantCount, createdAt }` |

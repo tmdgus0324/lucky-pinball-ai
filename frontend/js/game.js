@@ -461,14 +461,16 @@ function createBallEl(sceneEl, name, colorIndex) {
   return el;
 }
 
-function renderRankPanel(rankListEl, finishedEntries, pendingNames) {
+// pendingByPlayer는 playerId → 이름. 이름을 키로 쓰면 같은 이름의 참가자가 둘일 때 한 명만 남고,
+// 그중 한 명이 도착하면 다른 한 명까지 "진행 중"에서 사라졌다(React engine.ts와 같은 수정).
+function renderRankPanel(rankListEl, finishedEntries, pendingByPlayer) {
   rankListEl.innerHTML = '';
-  const total = finishedEntries.length + pendingNames.size;
+  const total = finishedEntries.length + pendingByPlayer.size;
 
   // 참가자 이름은 사용자가 입력한 값이라, innerHTML로 넣으면 이름에 태그를 넣어 스크립트를
   // 실행시킬 수 있다(XSS). textContent/append는 항상 텍스트로만 취급해서 안전하다.
   finishedEntries.forEach((entry, index) => {
-    const isLast = index === finishedEntries.length - 1 && pendingNames.size === 0;
+    const isLast = index === finishedEntries.length - 1 && pendingByPlayer.size === 0;
     const item = document.createElement('div');
     item.className = 'rank-item' + (isLast ? ' selected' : '');
     const position = document.createElement('span');
@@ -479,7 +481,7 @@ function renderRankPanel(rankListEl, finishedEntries, pendingNames) {
     rankListEl.appendChild(item);
   });
 
-  pendingNames.forEach((name) => {
+  pendingByPlayer.forEach((name) => {
     const item = document.createElement('div');
     item.className = 'rank-item pending';
     const position = document.createElement('span');
@@ -512,7 +514,7 @@ async function runPinballGame({ boardEl, rankListEl, participants, onComplete })
   const spinners = buildBoard(adapter, sceneEl, cfg);
 
   const ballStates = [];
-  const pendingNames = new Set();
+  const pendingByPlayer = new Map();
 
   participants.forEach((participant, index) => {
     const x = spawnX(index, participants.length, cfg);
@@ -527,12 +529,12 @@ async function runPinballGame({ boardEl, rankListEl, participants, onComplete })
       finished: false,
       stallTicks: 0,
     });
-    pendingNames.add(participant.name);
+    pendingByPlayer.set(participant.playerId, participant.name);
   });
 
   const finishOrder = [];
   const finishedEntries = [];
-  renderRankPanel(rankListEl, finishedEntries, pendingNames);
+  renderRankPanel(rankListEl, finishedEntries, pendingByPlayer);
   applyCamera(sceneEl, cfg, cfg.boardWidth / 2, cfg.boardHeight / 2, 1);
 
   adapter.run(() => {
@@ -554,8 +556,8 @@ async function runPinballGame({ boardEl, rankListEl, participants, onComplete })
           state.el.classList.add('finished');
           finishOrder.push(state.playerId);
           finishedEntries.push({ name: state.name });
-          pendingNames.delete(state.name);
-          renderRankPanel(rankListEl, finishedEntries, pendingNames);
+          pendingByPlayer.delete(state.playerId);
+          renderRankPanel(rankListEl, finishedEntries, pendingByPlayer);
         } else {
           allFinished = false;
           unfinished.push({ state, pos });

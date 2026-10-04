@@ -22,7 +22,7 @@
 - 프론트엔드: React 19 + TypeScript + Vite, Matter.js
 - DB: Neon PostgreSQL(운영) / H2(로컬·테스트)
 - 배포: Render(Docker) + Vercel + Neon
-- 테스트·CI: JUnit 99개(단위 · HTTP 통합 · 동시성 · 가짜 Claude 서버), GitHub Actions
+- 테스트·CI: JUnit 109개(단위 · HTTP 통합 · 동시성 · 가짜 Claude 서버), GitHub Actions
 
 ## 아키텍처
 

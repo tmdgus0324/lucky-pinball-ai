@@ -32,8 +32,8 @@ export function RegistrationForm({ players, onRegistered, onQuickAdd, onRemove, 
     const count = Math.min(quickCount, remainingSlots);
     const added: Player[] = [];
     // "1번, 2번, ..."을 현재 목록에 없는 가장 작은 번호부터 채운다 — 전체 초기화 뒤에는 항상 1번부터
-    // 나가고, 이미 1·2번이 있으면 3번부터 이어진다. 한 판에 같은 이름이 둘 생기면 엔진의 대기 목록
-    // (pendingNames, 이름 기준 Set)과 순위 패널이 틀어지므로 번호를 매번 1부터 리셋하지는 않는다.
+    // 나가고, 이미 1·2번이 있으면 3번부터 이어진다. 한 판에 같은 이름이 둘 생기면 화면에서 누가 누구인지
+    // 구분하기 어려우므로 번호를 매번 1부터 리셋하지는 않는다(순위 패널 자체는 playerId 기준이라 꼬이지 않는다).
     const usedNames = new Set(players.map((p) => p.name));
     let seq = 1;
     try {

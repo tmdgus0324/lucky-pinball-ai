@@ -8,6 +8,7 @@ import jakarta.validation.constraints.Past;
 import jakarta.validation.constraints.Size;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -45,11 +46,11 @@ public class PlayerController {
      */
     @GetMapping("/api/players/reusable")
     public List<ReusablePlayerView> reusablePlayers() {
+        Map<Long, List<FortuneResultEntity>> historyByPlayer = fortuneResultJpaRepository.findAllGroupedByPlayerId();
         return playerJpaRepository.findAllByOrderByCreatedAtDesc().stream()
                 .filter(player -> player.getBirthDate() != null)
                 .map(player -> {
-                    List<FortuneResultEntity> history = fortuneResultJpaRepository
-                            .findByPlayerIdOrderByCreatedDateAsc(player.getId());
+                    List<FortuneResultEntity> history = historyByPlayer.getOrDefault(player.getId(), List.of());
                     String fortuneSource = history.stream()
                             .anyMatch(h -> FortuneResultEntity.SOURCE_AI.equals(h.getSource()))
                             ? FortuneResultEntity.SOURCE_AI

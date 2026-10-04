@@ -318,3 +318,44 @@ spring:
 **오해하기 쉬운 포인트**: "Postgres가 Oracle보다 기능이 떨어진다"는 요즘은 사실이 아니다 — 차이는 기술력보다 **"장애 시 벤더가 책임지고 대응해주는 유상 지원 계약이 필요한가"**에 가깝다. 금융권/공공기관이 Oracle·Tibero를 고수하는 이유도 대부분 이 지원계약+기존 시스템과의 호환성 때문이지, Postgres가 기술적으로 못해서가 아니다.
 
 **이 추상화(JPA)의 실전 증거**: Hibernate가 접속한 DB 제품을 보고 알맞은 SQL 방언으로 자동 번역해준다 — Render 로그의 `Database dialect: PostgreSQLDialect`가 그 증거다(H2에 붙으면 H2Dialect, Oracle이면 OracleDialect). 그래서 "H2로 개발하고 Postgres로 배포"라는, 실무에서도 흔한 전환을 엔티티 코드 변경 없이 설정값만 바꿔서 어제 직접 검증한 것이다.
+
+---
+
+## [2026-10-05] 참가자 목록 API의 N+1 해결
+
+`devhelp/06` AI 코멘트에서 지적한 문제다. `GET /api/players/reusable`(슬립 방지 cron이 주기적으로 부르는 공개 주소)과 `GET /api/admin/players`가 참가자 전체를 읽은 뒤 **참가자마다 운세 이력을 따로 조회**했다. 게임 목록(`/api/admin/games`)은 이미 fetch join(`findAllWithDetails`)으로 해결되어 있었고, 참가자 쪽만 남아 있었다.
+
+### 1. 먼저 테스트로 재현
+
+`PlayerListQueryCountTest`를 새로 만들었다. Hibernate 통계(`hibernate.generate_statistics=true`)로 **실행된 SQL 문 개수**를 센다.
+
+1. 참가자 2명을 넣고 API를 한 번 호출해 쿼리 수를 잰다.
+2. 참가자 10명을 더 넣고 다시 잰다.
+3. 두 값이 같아야 통과.
+
+고치기 전 결과는 `expected: <3> but was: <13>` — 참가자가 10명 늘면 쿼리도 정확히 10개 늘었다(관리자 목록도 15 → 25). 절대 개수가 아니라 "늘어나는지"를 보게 한 이유는, 테스트끼리 같은 메모리 DB를 써서 이미 들어 있는 참가자 수가 실행 순서마다 달라지기 때문이다.
+
+### 2. 수정 — 이력을 한 번에 읽고 메모리에서 나눈다
+
+```java
+// FortuneResultJpaRepository
+List<FortuneResultEntity> findAllByOrderByCreatedDateAscIdAsc();
+
+default Map<Long, List<FortuneResultEntity>> findAllGroupedByPlayerId() {
+    return findAllByOrderByCreatedDateAscIdAsc().stream()
+            .filter(result -> result.getPlayerId() != null)
+            .collect(Collectors.groupingBy(FortuneResultEntity::getPlayerId));
+}
+```
+
+두 컨트롤러는 이 `Map`에서 `historyByPlayer.getOrDefault(player.getId(), List.of())`로 꺼내 쓴다. 이제 참가자 수와 상관없이 **쿼리 2번**(참가자 목록 1번 + 운세 이력 1번)이다.
+
+- **`IN (참가자 id 목록)` 대신 전체 조회를 고른 이유**: 두 API 모두 어차피 참가자 전체를 보여 주므로 결과가 같다. `IN`은 id가 아주 많아지면 DB의 파라미터 개수 제한(PostgreSQL 약 3만 2천 개)에 걸릴 수 있다.
+- **fetch join을 안 쓴 이유**: 운세 이력 엔티티는 `playerId`를 숫자로만 들고 있고 참가자와 JPA 연관관계(`@ManyToOne`)가 없다. 연관관계를 새로 맺는 것은 이 문제에 비해 변경이 크다.
+- **null 걸러내기**: `groupingBy`는 키가 null이면 예외를 던진다. 운영 DB에는 Mock 시절의 옛 행이 남아 있어서, 혹시 `playerId`가 빈 행이 있어도 목록 API가 500이 되지 않게 했다.
+- **같은 날짜 안의 순서**: `createdDate`는 날짜까지만 저장해서 같은 날 행끼리는 순서가 정해지지 않았다. `id`를 두 번째 정렬 기준으로 넣어 고정했다.
+
+### 3. 남은 것
+
+- 이제는 참가자 수가 아니라 **이력 전체 크기**에 비례해 무거워진다. 데이터가 수만 건이 되면 목록 API에 페이징(`Pageable`)을 넣고, 그 페이지의 참가자 id로만 이력을 가져오는 것이 다음 단계다.
+- 인덱스는 여전히 없다(이 문서 맨 위 AI 코멘트).

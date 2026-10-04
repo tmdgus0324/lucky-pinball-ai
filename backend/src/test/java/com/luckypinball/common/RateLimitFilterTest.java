@@ -168,6 +168,41 @@ class RateLimitFilterTest {
         assertEquals(429, doViaProxy(filter, "203.0.113.90", "True-Client-IP", "198.51.100.200").getStatus());
     }
 
+    private MockHttpServletResponse doLoginRequest(RateLimitFilter filter, String ip) throws Exception {
+        MockHttpServletRequest request = new MockHttpServletRequest("POST", "/api/admin/login");
+        request.setRemoteAddr(ip);
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        response.setStatus(200);
+        filter.doFilter(request, response, (req, res) -> {
+        });
+        return response;
+    }
+
+    @Test
+    void adminLoginIsLimitedToTenAttemptsPerMinute() throws Exception {
+        RateLimitFilter filter = new RateLimitFilter("True-Client-IP");
+        for (int i = 1; i <= 10; i++) {
+            assertEquals(200, doLoginRequest(filter, "203.0.113.100").getStatus(), "로그인 시도 " + i + "번째는 통과해야 한다");
+        }
+
+        assertEquals(429, doLoginRequest(filter, "203.0.113.100").getStatus(), "11번째 로그인 시도는 막혀야 한다");
+        assertEquals(200, doLoginRequest(filter, "203.0.113.101").getStatus(), "다른 IP의 로그인은 영향받지 않는다");
+    }
+
+    @Test
+    void loginAndFortuneLimitsAreCountedSeparately() throws Exception {
+        RateLimitFilter filter = new RateLimitFilter("True-Client-IP");
+        FilterChain noop = (req, res) -> {
+        };
+        for (int i = 0; i < 20; i++) {
+            doFortuneRequest(filter, noop, "203.0.113.110");
+        }
+
+        assertEquals(429, doFortuneRequest(filter, noop, "203.0.113.110").getStatus());
+        assertEquals(200, doLoginRequest(filter, "203.0.113.110").getStatus(),
+                "운세를 한도까지 불렀다고 관리자 로그인까지 막히면 안 된다");
+    }
+
     private MockHttpServletResponse doFortuneRequest(RateLimitFilter filter, FilterChain chain, String ip) throws Exception {
         MockHttpServletRequest request = new MockHttpServletRequest("POST", "/api/fortune");
         request.setRemoteAddr(ip);

@@ -13,6 +13,7 @@ import com.luckypinball.player.PlayerJpaRepository;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -46,8 +47,10 @@ public class AdminController {
     @GetMapping("/api/admin/players")
     public List<PlayerAdminView> players() {
         // 가장 최근에 등록한 참가자가 먼저 보이도록 정렬 (관리자가 방금 등록한 참가자를 바로 확인할 수 있게)
+        // 운세 이력은 한 번에 읽어 참가자별로 나눈다 — 참가자마다 조회하면 N+1(devhelp/07).
+        Map<Long, List<FortuneResultEntity>> historyByPlayer = fortuneResultJpaRepository.findAllGroupedByPlayerId();
         return playerJpaRepository.findAllByOrderByCreatedAtDesc().stream()
-                .map(this::toPlayerAdminView)
+                .map(player -> toPlayerAdminView(player, historyByPlayer.getOrDefault(player.getId(), List.of())))
                 .toList();
     }
 
@@ -72,9 +75,8 @@ public class AdminController {
         return aiHealthService.check();
     }
 
-    private PlayerAdminView toPlayerAdminView(PlayerEntity player) {
-        List<FortuneHistoryEntry> history = fortuneResultJpaRepository
-                .findByPlayerIdOrderByCreatedDateAsc(player.getId()).stream()
+    private PlayerAdminView toPlayerAdminView(PlayerEntity player, List<FortuneResultEntity> results) {
+        List<FortuneHistoryEntry> history = results.stream()
                 .map(FortuneHistoryEntry::from)
                 .toList();
         // 이 참가자에서 실제로 Claude를 호출한 적이 있는지(AI) 없으면 캐시만 썼는지(CACHE)를

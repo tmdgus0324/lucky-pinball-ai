@@ -15,9 +15,13 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 /**
- * `/api/fortune`은 실제로 비용이 드는 Claude API를 호출할 수 있는 유일한 엔드포인트다.
- * 인증이 없는 공개 서비스라, IP당 1분에 너무 많이 호출하면 429로 막는다 — 이번 판(최대 8명)
- * 정도는 문제없이 통과하고, 반복 스크립트로 긁는 것만 막는 정도의 단순한 방어다.
+ * IP당 1분에 너무 많이 호출하면 429로 막는다. 대상 경로는 두 곳이고, 경로마다 따로 센다.
+ * <ul>
+ *   <li>`/api/fortune`(분당 20회) — 실제로 비용이 드는 Claude API를 호출할 수 있는 유일한 엔드포인트다.
+ *       이번 판(최대 8명) 정도는 문제없이 통과하고, 반복 스크립트로 긁는 것만 막는다.</li>
+ *   <li>`/api/admin/login`(분당 10회) — 비밀번호를 계속 바꿔 넣어 보는 대입 공격을 늦춘다.
+ *       사람이 비밀번호를 몇 번 틀리는 정도는 걸리지 않는다. 성공·실패를 가리지 않고 시도 횟수로 센다.</li>
+ * </ul>
  *
  * 인메모리 카운터라서 서버가 여러 대로 늘어나면 IP별 카운트가 서버마다 따로 세어지지만,
  * 지금 규모(단일 인스턴스, 무료 티어)에서는 충분하다 — Redis 등으로 옮기는 건 트래픽이
@@ -30,11 +34,14 @@ public class RateLimitFilter extends OncePerRequestFilter {
 
     private static final Logger log = LoggerFactory.getLogger(RateLimitFilter.class);
 
-    private static final String LIMITED_PATH = "/api/fortune";
-    private static final int MAX_REQUESTS_PER_WINDOW = 20;
+    /** 경로 → 1분에 허용하는 요청 수. */
+    private static final Map<String, Integer> LIMITS_PER_WINDOW = Map.of(
+            "/api/fortune", 20,
+            "/api/admin/login", 10);
     private static final long WINDOW_MILLIS = 60_000;
 
-    private final Map<String, Window> windowsByIp = new ConcurrentHashMap<>();
+    /** 키는 "경로 IP" — 운세를 많이 불렀다고 로그인까지 막히지 않게 경로마다 따로 센다. */
+    private final Map<String, Window> windows = new ConcurrentHashMap<>();
 
     /** 앞단 프록시가 실제 방문자 IP를 넣어 주는 헤더 이름. 비어 있으면 연결 주소(getRemoteAddr)만 쓴다. */
     private final String clientIpHeader;
@@ -46,13 +53,15 @@ public class RateLimitFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws ServletException, IOException {
-        if (!LIMITED_PATH.equals(request.getRequestURI())) {
+        String path = request.getRequestURI();
+        Integer limit = LIMITS_PER_WINDOW.get(path);
+        if (limit == null) {
             chain.doFilter(request, response);
             return;
         }
 
         String ip = clientIp(request);
-        Window window = windowsByIp.computeIfAbsent(ip, key -> new Window());
+        Window window = windows.computeIfAbsent(path + " " + ip, key -> new Window(limit));
         if (!window.tryConsume()) {
             // AdminAuthFilter의 401과 같은 이유로 CORS 헤더를 직접 붙여야 한다 — 안 그러면
             // 브라우저가 429를 "Failed to fetch"로 뭉개버린다(devhelp/08(구 34)).
@@ -88,8 +97,13 @@ public class RateLimitFilter extends OncePerRequestFilter {
 
     /** 1분 고정 창(fixed window) 방식 — 정교하지 않지만 구현이 단순하고 이 규모엔 충분하다. */
     private static final class Window {
+        private final int limit;
         private long windowStartMillis = System.currentTimeMillis();
         private int count;
+
+        Window(int limit) {
+            this.limit = limit;
+        }
 
         synchronized boolean tryConsume() {
             long now = System.currentTimeMillis();
@@ -98,7 +112,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
                 count = 0;
             }
             count++;
-            return count <= MAX_REQUESTS_PER_WINDOW;
+            return count <= limit;
         }
     }
 }
