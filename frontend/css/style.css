@@ -205,6 +205,12 @@ button:disabled {
   border-left: 4px solid var(--tier-color, var(--muted));
   border-radius: 10px;
   padding: 14px;
+  /* 그리드 칸이 긴 내용 때문에 늘어나지 않게(기본 min-width:auto) 하고, 줄바꿈 규칙을 정한다(devhelp/46).
+     keep-all: 한글을 글자 중간이 아니라 띄어쓰기에서만 줄바꿈("날입니/다" 방지).
+     overflow-wrap:anywhere: 띄어쓰기 없는 긴 영문·이름은 그래도 카드 안에서 줄바꿈(카드 밖으로 잘림 방지). */
+  min-width: 0;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
 }
 
 .fortune-card .name {
