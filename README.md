@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/tmdgus0324/lucky-pinball-ai/actions/workflows/ci.yml/badge.svg)](https://github.com/tmdgus0324/lucky-pinball-ai/actions/workflows/ci.yml)
 
-사다리타기 대신 만든 웹 추첨 게임입니다. 이름과 생년월일을 입력하면 Claude가 그날의 운세를 분석해서, 운세가 좋을수록 핀볼 트랙에서 더 낮은(불리한) 위치에서 출발합니다. 참가자들은 물리 엔진 위에서 결승선까지 굴러가고, 가장 늦게 도착한 사람이 당첨자입니다.
+사다리타기 대신 만든 웹 추첨 게임입니다. 이름과 생년월일을 입력하면 Claude가 그날의 운세를 분석해서, 운세가 좋을수록 핀볼 트랙의 더 높은 곳(결승선에서 먼, 불리한 위치)에서 출발하고, 운세가 나쁠수록 결승선 가까이에서 출발합니다. 참가자들은 물리 엔진 위에서 결승선까지 굴러가고, 가장 늦게 도착한 사람이 당첨자입니다.
 
 - 데모: https://lucky-pinball-ai.vercel.app
 - 관리자 화면(`/admin`) 데모 계정: 아이디 `admin` / 비밀번호 `1234` — 포트폴리오 시연용으로 공개한 계정이고, 조회 기능(참가자·게임·오류 로그)만 있습니다. 비밀번호는 코드가 아니라 환경변수(`ADMIN_USERNAME`, `ADMIN_PASSWORD`)로 주입합니다.
@@ -23,6 +23,60 @@
 - DB: 로컬 개발은 H2(파일), 배포는 Neon(PostgreSQL) — 소스에는 H2 설정 하나뿐이고 운영은 Render 환경변수가 덮어씁니다. 정리는 `devhelp/35`의 4-2장
 - 프론트엔드: React 19 + TypeScript + Vite, Matter.js (기존 Vanilla JS 버전 `frontend/`도 병행 유지)
 - 배포: Render(Docker) + Vercel + Neon
+- 테스트·CI: JUnit 99개(단위 · HTTP 통합 · 동시성 · 가짜 Claude 서버로 장애 상황), GitHub Actions에서 백엔드 테스트 + 프론트 lint·build
+
+## 아키텍처
+
+```mermaid
+flowchart LR
+    user(["사용자 브라우저"])
+    subgraph vercel["Vercel · React SPA"]
+        game["게임 화면<br/>Matter.js 물리 시뮬레이션"]
+        admin["관리자 화면"]
+        study["공부하기 · React<br/>서버 호출 없음"]
+    end
+    subgraph render["Render · Spring Boot · Docker 1대"]
+        filters["필터<br/>추적 ID → 요청 제한 → 관리자 인증"]
+        api["REST API<br/>참가자 · 운세 · 게임 · 관리자"]
+        fortune["FortuneQueryService<br/>신원 캐시 · 신원별 잠금 · 임시 점수"]
+    end
+    neon[("Neon PostgreSQL<br/>참가자 · 운세 이력 · 게임 · 오류 로그")]
+    claude["Claude API<br/>Haiku 4.5"]
+    cron["cron-job.org<br/>평일 낮 슬립 방지"]
+
+    user --> game
+    user --> admin
+    user --> study
+    game -- "운세 조회 · 게임 생성 · 결과 보고" --> filters
+    admin -- "조회 · AI 연결 확인 · 토큰 필요" --> filters
+    filters --> api
+    api --> fortune
+    fortune -- "캐시에 없을 때만" --> claude
+    api --> neon
+    fortune --> neon
+    cron -. "주기적 요청" .-> filters
+```
+
+- **물리 시뮬레이션은 브라우저에서** 돌고, 서버는 참가자·운세·게임 상태와 결과를 관리합니다. 결승선 도착 순서는 브라우저가 `POST /api/game/result`로 보고합니다.
+- 서버 요청은 필터를 차례로 지납니다: 모든 요청에 추적 ID → `/api/fortune`만 IP당 분당 20회 제한 → `/api/admin/**`은 관리자 토큰 확인.
+- DB는 로컬 개발·테스트에서 H2, 운영에서 Neon입니다(`devhelp/35`).
+
+**운세 요청 흐름** — 비용이 드는 Claude 호출을 최소화하고, Claude가 실패해도 게임은 계속되게 하는 부분입니다.
+
+```mermaid
+flowchart TD
+    req["POST /api/fortune"] --> birth{"생년월일 입력?"}
+    birth -- "아니오" --> none["버프 없이 참여<br/>AI 호출 없음"]
+    birth -- "예" --> lock["신원별 잠금<br/>이름+생년월일이 같은 동시 요청은<br/>순서대로 처리"]
+    lock --> cache{"같은 신원의 결과가<br/>DB에 있나?"}
+    cache -- "있음" --> reuse["재사용<br/>source=CACHE · 비용 0"]
+    cache -- "없음" --> claudeCall["Claude 호출<br/>타임아웃 10초 · 재시도 1회"]
+    claudeCall -- "성공" --> ai["저장<br/>source=AI"]
+    claudeCall -- "실패 · 타임아웃" --> fb["규칙 기반 임시 점수<br/>source=FALLBACK · 캐시에 넣지 않음<br/>관리자 오류 로그에 기록"]
+    reuse --> res["상대평가 시작 높이 계산 → 응답"]
+    ai --> res
+    fb --> res
+```
 
 ## 구조 특징
 
@@ -65,6 +119,23 @@ devhelp/         구현 과정과 트러블슈팅 기록
 - 관리자 화면 표(참가자·게임 목록)의 좁은 화면 대응
 
 자세한 계획은 [`plan/05_improvement-backlog.md`](./plan/05_improvement-backlog.md)에 정리해뒀습니다.
+
+## 알려진 한계
+
+포트폴리오 규모(서버 1대, 한 판 최대 8명)에 맞춰 일부러 단순하게 둔 부분과, 아직 하지 않은 부분입니다.
+
+| 영역 | 한계 | 규모가 커지면 |
+|---|---|---|
+| 게임 결과 신뢰성 | 물리 시뮬레이션이 브라우저에서 돌아서, 서버는 보고된 도착 순서가 "참가자 구성과 맞는지"만 검증하고 **순서 자체가 조작됐는지는 알 수 없습니다** | 서버에서 같은 시드로 시뮬레이션을 재현하거나, 결과를 서버에서 결정 |
+| 서버 1대 전제 | 신원별 잠금, 요청 제한 카운터, 관리자 로그인 토큰이 모두 **서버 메모리**에 있습니다. 서버를 늘리면 서버마다 따로 동작하고, 재시작하면 관리자는 다시 로그인해야 합니다 | Redis 같은 공유 저장소, DB 유니크 제약 |
+| 관리자 인증 | 환경변수의 계정 하나 + 메모리 토큰(12시간)인 간이 방식입니다. Spring Security·JWT·권한 구분은 없고, 데모 계정은 공개되어 있습니다(조회 기능만) | Spring Security, 계정·권한 관리 |
+| DB 스키마 관리 | `ddl-auto: update`로 테이블을 자동으로 맞춥니다. 마이그레이션 이력 관리(Flyway)는 적용하지 않았습니다 | Flyway 도입(`devhelp/35`에 방법 정리) |
+| DB 엔진 차이 | 로컬·CI 테스트는 H2, 운영은 PostgreSQL입니다. JPA만 써서 지금은 문제가 없지만, 엔진마다 다른 SQL을 쓰면 운영에서만 드러날 수 있습니다 | Testcontainers 등으로 PostgreSQL에서 테스트 |
+| AI 장애 대응 | Claude가 죽어 있으면 요청마다 최대 약 20초 기다린 뒤 임시 점수로 넘어갑니다. 연속 실패 시 호출을 잠시 건너뛰는 서킷 브레이커는 없습니다 | 서킷 브레이커 |
+| 운영·모니터링 | 오류 로그는 최근 1000건만 관리자 화면에서 보고, 스택트레이스는 서버 로그에만 있습니다. 알림·지표 모니터링은 없습니다 | 로그 수집·알림 도구 |
+| 콜드 스타트 | Render 무료 티어라 오래 쉬면 첫 요청에 1~2분이 걸립니다(평일 낮에는 주기적 요청으로 완화) | 유료 인스턴스 |
+| 테스트 범위 | 백엔드는 자동 테스트가 있지만, **프론트엔드는 자동 테스트가 없습니다**(브라우저 확인 스크립트로 수동 검증). 부하 테스트도 하지 않았습니다 | 컴포넌트·E2E 테스트, 부하 테스트 |
+| 프론트엔드 두 벌 | 기존 Vanilla JS 버전(`frontend/`)을 함께 유지하고 있어서, 물리 엔진 코드를 고칠 때 두 곳을 맞춰야 합니다 | 한쪽으로 정리 |
 
 ## 출처와 참고
 
