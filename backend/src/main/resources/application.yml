@@ -34,6 +34,11 @@ logging:
 # Claude 호출 제한. SDK 기본값(타임아웃 10분, 재시도 2회)이면 Claude가 멈췄을 때 요청 하나가 수십 분을
 # 붙잡히므로 줄였다. 평소 응답이 4초 안팎이라 10초 + 재시도 1회(최악 약 20초). 환경변수
 # ANTHROPIC_TIMEOUT_SECONDS / ANTHROPIC_MAX_RETRIES로 덮어쓸 수 있다.
+# 요청 제한(/api/fortune)이 방문자를 구분할 때 쓰는 헤더. Render 앞단의 Cloudflare가 실제 방문자 IP를 넣어 준다.
+# X-Forwarded-For는 클라이언트가 조작할 수 있어서 쓰지 않는다(devhelp/08). 다른 플랫폼이면 그곳이 보장하는 헤더로 바꾼다.
+rate-limit:
+  client-ip-header: ${CLIENT_IP_HEADER:True-Client-IP}
+
 anthropic:
   timeout-seconds: 10
   max-retries: 1
