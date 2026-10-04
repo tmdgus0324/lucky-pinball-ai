@@ -12,6 +12,13 @@ import com.luckypinball.fortune.FortuneQueryService.FortuneQueryResult;
 import com.luckypinball.player.PlayerEntity;
 import com.luckypinball.player.PlayerService;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -33,11 +40,19 @@ class FortuneQueryServiceTest {
     static class ControllableFortuneService implements FortuneService {
         volatile RuntimeException failure;
         volatile int score = 90;
+        volatile long delayMillis = 0;
         final AtomicInteger calls = new AtomicInteger();
 
         @Override
         public FortuneResult analyze(String name, LocalDate birthDate) {
             calls.incrementAndGet();
+            if (delayMillis > 0) {
+                try {
+                    Thread.sleep(delayMillis);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
+            }
             if (failure != null) {
                 throw failure;
             }
@@ -66,6 +81,7 @@ class FortuneQueryServiceTest {
     void resetFake() {
         ai.failure = null;
         ai.score = 90;
+        ai.delayMillis = 0;
         ai.calls.set(0);
     }
 
@@ -176,5 +192,65 @@ class FortuneQueryServiceTest {
 
         assertFalse(repository.findByPlayerIdOrderByCreatedDateAsc(bug.getId()).stream()
                 .anyMatch(r -> "FALLBACK".equals(r.getSource())), "버그를 임시 점수로 덮으면 안 된다");
+    }
+
+    /** 같은 신원(이름+생년월일)으로 등록된 참가자 n명이 동시에 운세를 확인한다. */
+    private List<FortuneQueryResult> checkAllAtOnce(List<PlayerEntity> players) throws Exception {
+        ExecutorService pool = Executors.newFixedThreadPool(players.size());
+        try {
+            CountDownLatch ready = new CountDownLatch(players.size());
+            CountDownLatch go = new CountDownLatch(1);
+            List<Future<FortuneQueryResult>> futures = new ArrayList<>();
+            for (PlayerEntity player : players) {
+                futures.add(pool.submit(() -> {
+                    ready.countDown();
+                    go.await();   // 모두 준비된 뒤 한꺼번에 출발
+                    return service.getTodayFortune(player.getId());
+                }));
+            }
+            ready.await();
+            go.countDown();
+            List<FortuneQueryResult> results = new ArrayList<>();
+            for (Future<FortuneQueryResult> future : futures) {
+                results.add(future.get(10, TimeUnit.SECONDS));
+            }
+            return results;
+        } finally {
+            pool.shutdownNow();
+        }
+    }
+
+    @Test
+    void simultaneousRequestsForTheSameIdentityCallTheAiOnlyOnce() throws Exception {
+        // AI가 느린 동안 같은 신원의 요청이 겹치면, 모두 "캐시 없음"을 보고 각자 AI를 부르는 문제(비용이 N배)를 재현한다.
+        ai.delayMillis = 400;
+        List<PlayerEntity> players = new ArrayList<>();
+        for (int i = 0; i < 6; i++) {
+            players.add(newPlayer("동시신원"));
+        }
+
+        List<FortuneQueryResult> results = checkAllAtOnce(players);
+
+        assertEquals(1, ai.calls.get(), "같은 이름+생년월일이면 AI는 한 번만 호출되어야 한다");
+        assertEquals(1, results.stream().filter(r -> "AI".equals(r.source())).count(), "한 명만 AI 결과를 받고");
+        assertEquals(5, results.stream().filter(r -> "CACHE".equals(r.source())).count(), "나머지는 그 결과를 재사용한다");
+        assertEquals(1, results.stream().map(FortuneQueryResult::fortuneScore).distinct().count(), "점수도 모두 같아야 한다");
+    }
+
+    @Test
+    void differentIdentitiesAreNotSerializedByTheLock() throws Exception {
+        // 잠금이 너무 넓으면(전체 잠금) 서로 다른 사람의 요청까지 줄을 선다. 신원별로만 잠겨야 한다.
+        ai.delayMillis = 500;
+        List<PlayerEntity> players = new ArrayList<>();
+        for (int i = 0; i < 4; i++) {
+            players.add(newPlayer("병렬신원" + i));
+        }
+
+        long startedAt = System.currentTimeMillis();
+        checkAllAtOnce(players);
+        long elapsed = System.currentTimeMillis() - startedAt;
+
+        assertEquals(4, ai.calls.get(), "서로 다른 신원은 각자 AI를 호출한다");
+        assertTrue(elapsed < 1500, "4명이 줄을 서면 약 2000ms다. 병렬이면 500ms 근처여야 한다: " + elapsed + "ms");
     }
 }

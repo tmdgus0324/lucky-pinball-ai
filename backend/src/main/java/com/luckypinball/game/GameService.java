@@ -79,6 +79,15 @@ public class GameService {
 
     public GameSession start(String gameId) {
         GameSession session = getSessionOrThrow(gameId);
+        // 이전에는 상태를 확인하지 않아서, 이미 끝난 게임도 다시 STARTED로 바뀌었다(결과는 남은 채 상태만 되돌아감).
+        if (session.getStatus() == GameStatus.FINISHED) {
+            throw ApiException.conflict("Game already finished: " + gameId);
+        }
+        // 네트워크 재시도 등으로 시작 요청이 두 번 와도 시작 시각을 덮어쓰지 않고 그대로 돌려준다.
+        if (session.getStatus() == GameStatus.STARTED) {
+            log.info("이미 시작된 게임 — 상태 유지: gameId={}", gameId);
+            return session;
+        }
         session.start();
         log.info("게임 시작: gameId={}", gameId);
         return gameRepository.save(session);
@@ -89,6 +98,10 @@ public class GameService {
 
         if (session.hasResult()) {
             throw ApiException.conflict("Game already has a reported result: " + gameId);
+        }
+        // 화면은 항상 생성 → 시작 → 결과 순서로 부른다. 시작하지 않은 게임의 결과는 받지 않는다.
+        if (session.getStatus() != GameStatus.STARTED) {
+            throw ApiException.conflict("Game has not started yet: " + gameId);
         }
 
         Set<Long> expected = session.getParticipants().stream()

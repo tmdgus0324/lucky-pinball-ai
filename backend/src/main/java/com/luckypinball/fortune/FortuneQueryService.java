@@ -2,6 +2,7 @@ package com.luckypinball.fortune;
 
 import com.luckypinball.common.ApiException;
 import com.luckypinball.common.ErrorLogStore;
+import com.luckypinball.common.KeyedLock;
 import com.luckypinball.common.TraceId;
 import com.luckypinball.fortune.BuffCalculator.Buff;
 import com.luckypinball.player.PlayerEntity;
@@ -25,6 +26,7 @@ import org.springframework.stereotype.Service;
  *   있으면 그 결과를 재사용(무료)하고, 없으면 그때만 Claude를 호출(1회성 비용)한다.
  * - Claude 호출이 실패하면(타임아웃, 장애, 크레딧 소진 등) 임시 점수(FALLBACK)로 대신 진행한다.
  *   임시 점수는 정체성 캐시로 재사용하지 않는다 — 재사용하면 그 신원이 계속 가짜 점수를 쓰게 된다.
+ * - 같은 신원의 요청이 동시에 들어오면 신원별 잠금으로 줄을 세워, AI는 첫 요청만 호출한다.
  */
 @Service
 public class FortuneQueryService {
@@ -36,6 +38,12 @@ public class FortuneQueryService {
     private final FortuneResultJpaRepository fortuneResultJpaRepository;
     private final ErrorLogStore errorLogStore;
     private final boolean fallbackEnabled;
+
+    /** 같은 신원(이름+생년월일)의 "캐시 확인 → AI 호출 → 저장"을 한 번에 하나씩만 실행하기 위한 잠금. */
+    private final KeyedLock<Identity> identityLocks = new KeyedLock<>();
+
+    private record Identity(String name, LocalDate birthDate) {
+    }
 
     /** 이름+생년월일+날짜로 점수를 정하는 규칙 기반 생성기 — 같은 사람은 하루 동안 항상 같은 임시 점수를 받는다. */
     private final FortuneService fallbackGenerator = new MockFortuneGenerator();
@@ -81,6 +89,15 @@ public class FortuneQueryService {
                     new Buff(0, 0), "NONE");
         }
 
+        // 같은 신원의 요청이 동시에 들어오면 모두 "캐시 없음"을 보고 각자 AI를 부른다 — 동시 6건이면 AI 6번 호출(테스트로 재현).
+        // 신원별로 잠가서 첫 요청만 AI를 부르고, 기다리던 요청은 잠금을 얻은 뒤 캐시를 다시 보고 그 결과를 재사용한다.
+        // (이 메서드는 트랜잭션 밖이라 저장이 즉시 커밋되므로, 다음 요청은 잠금을 얻는 순간 방금 저장된 결과를 본다.)
+        return identityLocks.withLock(new Identity(player.getName(), player.getBirthDate()),
+                () -> resolveForIdentity(player, playerId, reuseOwnFallback));
+    }
+
+    /** 신원 잠금 안에서 실행된다. 캐시 확인과 AI 호출·저장이 한 덩어리로 묶여야 중복 호출이 생기지 않는다. */
+    private FortuneQueryResult resolveForIdentity(PlayerEntity player, Long playerId, boolean reuseOwnFallback) {
         // FALLBACK(임시 점수)은 일부러 캐시 조회 대상에서 뺀다 — AI가 복구되면 같은 신원이 진짜 결과를 받아야 한다.
         Optional<FortuneResultEntity> cached = fortuneResultJpaRepository
                 .findFirstByNameAndBirthDateAndSourceInOrderByCreatedDateAsc(
