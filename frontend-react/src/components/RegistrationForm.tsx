@@ -22,9 +22,12 @@ export function RegistrationForm({ players, onRegistered, onQuickAdd, onRemove, 
   const [quickAdding, setQuickAdding] = useState(false);
   const [aiTesting, setAiTesting] = useState(false);
   const [dbTesting, setDbTesting] = useState(false);
+  // 직접 등록도 응답이 올 때까지 막는다 — 안 그러면 느린 응답 중에 연달아 등록할 때 두 요청이 같은
+  // players.length를 보고 "1/8명"을 두 번 띄우고, 8명 제한 검사도 지나칠 수 있다.
+  const [submitting, setSubmitting] = useState(false);
 
   const remainingSlots = 8 - players.length;
-  const busy = quickAdding || aiTesting || dbTesting;
+  const busy = quickAdding || aiTesting || dbTesting || submitting;
 
   async function handleQuickAdd() {
     setQuickAdding(true);
@@ -141,6 +144,7 @@ export function RegistrationForm({ players, onRegistered, onQuickAdd, onRemove, 
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
+    if (busy) return;
     const trimmedName = name.trim();
     const rawBirth = birthInput.trim();
 
@@ -162,14 +166,18 @@ export function RegistrationForm({ players, onRegistered, onQuickAdd, onRemove, 
       return;
     }
 
+    setSubmitting(true);
     try {
       const player = await api.registerPlayer(trimmedName, birthDate);
       onRegistered(player);
-      setName('');
-      setBirthInput('');
+      // 응답을 기다리는 동안 다음 사람을 입력해 뒀다면 지우지 않는다 — 방금 등록한 값일 때만 비운다.
+      setName((current) => (current.trim() === trimmedName ? '' : current));
+      setBirthInput((current) => (current.trim() === rawBirth ? '' : current));
       setStatus({ text: `${players.length + 1}/8명 등록됨`, error: false });
     } catch (error) {
       setStatus({ text: `등록 실패: ${(error as Error).message}`, error: true });
+    } finally {
+      setSubmitting(false);
     }
   }
 
