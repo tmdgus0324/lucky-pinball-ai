@@ -1,6 +1,6 @@
 # frontend-react
 
-AI Lucky Pinball의 주력 프론트엔드입니다(React 19 + TypeScript + Vite, Matter.js). 프로젝트 소개는 [루트 README](../README.md), 구조 설명은 [`devdocs/01_아키텍처`](../devdocs/01_아키텍처.md)에 있습니다.
+AI Lucky Pinball의 주력 프론트엔드입니다(React 19 + TypeScript + Vite, Matter.js). 프로젝트 소개는 [루트 README](../README.md), 구조 설명은 [`devdocs/01_구조`](../devdocs/01_구조.md)에 있습니다.
 
 ## 실행
 

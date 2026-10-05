@@ -10,8 +10,8 @@ AI Lucky Pinball — 참가자의 운세를 Claude API로 분석해 버프(시�
 | `frontend-react/` | React 19 + TypeScript + Vite, Matter.js — **현재 주력 프론트엔드**                |
 | `frontend/`       | 기존 Vanilla HTML/CSS/JS 버전 — React 마이그레이션 7단계(교체) 전까지 병행 유지   |
 | `plan/`           | 처음 설계할 때의 계획 문서 (MVP 기준이라 지금과 다른 부분이 있음, 보존용). 각 문서 맨 위 AI 코멘트에 계획과 실제 비교, `07`은 다음 프로젝트 계획 가이드 |
-| `devdocs/`        | **지금 코드 기준** 설명서 — 아키텍처, API 명세, DB 스키마, 알려진 한계, 테스트 전략 |
-| `devhelp/`        | 작업 기록과 트러블슈팅 — 주제별 12개 문서(`README.md`에 목차와 옛 번호 대응표)   |
+| `devdocs/`        | 지금 코드 기준 설명서 3개 — 구조, API와 DB, 테스트 |
+| `devhelp/`        | 로컬 실행 방법(`README.md` 맨 앞), 작업 기록 01~12, 알려진 한계 13 |
 
 백엔드 패키지는 도메인별로 나뉜다: `player`, `fortune`, `game`, `admin`, `common`(추적 ID·요청 제한 필터, 예외·오류 로그, 키별 잠금), `config`(CORS).
 
@@ -39,7 +39,7 @@ node --check js/main.js    # 빌드 도구가 없으므로 문법 검사는 이�
 
 ## 반드시 지킬 것
 
-- **Claude API는 비용이 든다.** 운세는 `이름+생년월일` 기준으로 DB에 영구 캐시되며, 관리자 화면에서 `AI`/`CACHE`(Claude 실패 시 임시 점수는 `FALLBACK`, 캐시에 넣지 않음)로 구분된다. 캐시를 우회하거나 테스트에서 실제 API를 호출하는 코드를 만들지 않는다. 테스트는 `MockFortuneGenerator`(스프링 빈 아님), 가짜 `FortuneService`, JDK `HttpServer`로 띄운 가짜 Claude 서버를 쓴다(`devdocs/05`).
+- **Claude API는 비용이 든다.** 운세는 `이름+생년월일` 기준으로 DB에 영구 캐시되며, 관리자 화면에서 `AI`/`CACHE`(Claude 실패 시 임시 점수는 `FALLBACK`, 캐시에 넣지 않음)로 구분된다. 캐시를 우회하거나 테스트에서 실제 API를 호출하는 코드를 만들지 않는다. 테스트는 `MockFortuneGenerator`(스프링 빈 아님), 가짜 `FortuneService`, JDK `HttpServer`로 띄운 가짜 Claude 서버를 쓴다(`devdocs/03`).
 - **인터페이스 기반 교체 지점을 유지한다** — `FortuneService`, `GameRepository`, `PlayerJpaRepository`, `MatterAdapter`, `PinballMapConfig`. 호출부가 구현체에 직접 의존하게 바꾸지 않는다. 이 설계가 프로젝트의 핵심 포트폴리오 포인트다.
 - **에러는 `ApiException`을 던지고 `GlobalExceptionHandler`에 맡긴다.** 핸들러가 `ErrorLogStore`에 쌓아 `/api/admin/logs`로 조회되므로, 컨트롤러마다 따로 try/catch·로깅을 넣지 않는다.
 - **물리 엔진 코드는 React 밖에 둔다.** `frontend-react/src/game/engine.ts`는 명령형으로 DOM을 직접 갱신하고, `PinballBoard`는 `useRef`/`useEffect`로 감싸기만 한다. 공 위치를 React state로 옮기지 않는다 (이유: `plan/06` 2번 항목).
@@ -54,7 +54,7 @@ node --check js/main.js    # 빌드 도구가 없으므로 문법 검사는 이�
 
 ## 문서화 관례
 
-의미 있는 기능 추가나 버그 수정을 마치면 `devhelp/`에서 **주제가 맞는 문서 끝에 절로 추가**한다(절 제목에 날짜, 내용은 무엇을·왜 그렇게·어떤 문제를 만났는지). 맞는 주제가 없을 때만 다음 번호로 새 문서를 만든다. 아키텍처·API·DB 구조가 바뀌면 `devdocs/`의 해당 문서도 함께 고친다(`devdocs`는 "지금 기준" 설명서라 낡으면 안 된다). devhelp 참조는 `devhelp/09`처럼 새 번호로 쓰고, 통합 전 기록의 절은 `devhelp/02(구 25)`처럼 원래 번호를 함께 적는다.
+의미 있는 기능 추가나 버그 수정을 마치면 `devhelp/`에서 **주제가 맞는 문서 끝에 절로 추가**한다(절 제목에 날짜, 내용은 무엇을·왜 그렇게·어떤 문제를 만났는지). 맞는 주제가 없을 때만 다음 번호로 새 문서를 만든다. 아키텍처·API·DB 구조가 바뀌면 `devdocs/`의 해당 문서도 함께 고친다(`devdocs`는 "지금 기준" 설명서라 낡으면 안 된다). 한계가 해결되거나 새로 생기면 `devhelp/13_알려진_한계.md` 표도 고친다. devhelp 참조는 `devhelp/09`처럼 새 번호로 쓰고, 통합 전 기록의 절은 `devhelp/02(구 25)`처럼 원래 번호를 함께 적는다.
 
 ## 배포
 
