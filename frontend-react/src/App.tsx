@@ -9,6 +9,11 @@ const StudyReactChapterPage = lazy(() =>
   import('./pages/StudyReactChapterPage').then((m) => ({ default: m.StudyReactChapterPage })),
 );
 
+const StudySpringPage = lazy(() => import('./pages/StudySpringPage').then((m) => ({ default: m.StudySpringPage })));
+const StudySpringChapterPage = lazy(() =>
+  import('./pages/StudySpringChapterPage').then((m) => ({ default: m.StudySpringChapterPage })),
+);
+
 const loading = <p className="status-text">불러오는 중...</p>;
 
 export function App() {
@@ -22,6 +27,11 @@ export function App() {
           <Route
             path="/study/react/:chapterId"
             element={<Suspense fallback={loading}><StudyReactChapterPage /></Suspense>}
+          />
+          <Route path="/study/spring" element={<Suspense fallback={loading}><StudySpringPage /></Suspense>} />
+          <Route
+            path="/study/spring/:chapterId"
+            element={<Suspense fallback={loading}><StudySpringChapterPage /></Suspense>}
           />
         </Route>
       </Routes>

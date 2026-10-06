@@ -1,4 +1,10 @@
 import { Highlight, Prism, themes } from 'prism-react-renderer';
+// prism-react-renderer에 기본으로 없는 언어(공부하기 > Spring Boot용). prismGlobal이 먼저 와야 한다.
+import './prismGlobal';
+import 'prismjs/components/prism-java';
+import 'prismjs/components/prism-groovy';
+import 'prismjs/components/prism-properties';
+import 'prismjs/components/prism-bash';
 
 interface HighlighterProps {
   code: string;
@@ -9,7 +15,7 @@ interface HighlighterProps {
 /**
  * 실제로 색을 입히는 부분. prism-react-renderer가 커서(수십 kB) HighlightedCode가 lazy로만 불러온다 —
  * 하이라이터가 도착하기 전에는 색 없는 코드가 먼저 보이고, 도착하면 색이 입혀진다.
- * 이 라이브러리가 모르는 언어(bash 등)는 색 없이 그대로 보여준다.
+ * 등록되지 않은 언어(dockerfile 등)는 색 없이 그대로 보여준다.
  */
 export default function Highlighter({ code, language, lineNumbers }: HighlighterProps) {
   const known = language && Prism.languages[language] ? language : 'plain';

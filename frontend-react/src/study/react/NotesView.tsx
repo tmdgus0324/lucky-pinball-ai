@@ -99,31 +99,43 @@ function readShowAiPreference(): boolean {
   }
 }
 
+// 한국어 글은 "5~6장"처럼 범위에 물결표를 자주 쓴다. GFM 기본값은 물결표 하나(~)도 취소선으로 읽어서
+// 두 물결표 사이 글자에 줄이 그어진다. 취소선은 ~~두 개~~일 때만 인식하게 한다.
+const remarkPlugins: ComponentProps<typeof ReactMarkdown>['remarkPlugins'] = [[remarkGfm, { singleTilde: false }]];
+
 function Markdown({ children }: { children: string }) {
   return (
-    <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
+    <ReactMarkdown remarkPlugins={remarkPlugins} components={markdownComponents}>
       {children}
     </ReactMarkdown>
   );
 }
 
 export function NotesView({ chapter }: { chapter: Chapter }) {
-  const loader = notes[`./notes/${chapter.id}.md`];
+  return <MarkdownNotes noteKey={chapter.id} loader={notes[`./notes/${chapter.id}.md`]} />;
+}
+
+/**
+ * 마크다운 노트 하나를 `## ` 제목 단위로 접어서 보여준다. 공부하기 > Spring Boot도 같은 화면을 쓴다.
+ * @param noteKey 노트가 바뀌었는지 알아보는 값(챕터 id 등)
+ * @param loader 노트 원문을 읽어 오는 함수(import.meta.glob 결과). 없으면 "준비 중"을 보여준다.
+ */
+export function MarkdownNotes({ noteKey, loader }: { noteKey: string; loader: (() => Promise<string>) | undefined }) {
   const [loaded, setLoaded] = useState<{ id: string; sections: Section[] } | null>(null);
   const [showAi, setShowAi] = useState(readShowAiPreference);
-  const sections = loaded?.id === chapter.id ? loaded.sections : null;
+  const sections = loaded?.id === noteKey ? loaded.sections : null;
 
   useEffect(() => {
     let cancelled = false;
     if (loader) {
       loader().then((raw) => {
-        if (!cancelled) setLoaded({ id: chapter.id, sections: splitSections(raw) });
+        if (!cancelled) setLoaded({ id: noteKey, sections: splitSections(raw) });
       });
     }
     return () => {
       cancelled = true;
     };
-  }, [loader, chapter.id]);
+  }, [loader, noteKey]);
 
   if (!loader) {
     return <p className="status-text">이 챕터의 정리는 아직 준비 중입니다.</p>;

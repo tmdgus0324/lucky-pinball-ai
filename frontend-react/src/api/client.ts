@@ -4,7 +4,8 @@
  */
 // 배포 시 Vercel 환경변수 VITE_API_BASE(예: https://xxx.onrender.com)로 백엔드 주소를 바꿔
 // 끼울 수 있게 했다. 로컬 개발은 값을 안 주면 기존과 동일하게 localhost:8080을 그대로 쓴다.
-const API_BASE = `${import.meta.env.VITE_API_BASE ?? 'http://localhost:8080'}/api`;
+export const BACKEND_ORIGIN: string = import.meta.env.VITE_API_BASE ?? 'http://localhost:8080';
+const API_BASE = `${BACKEND_ORIGIN}/api`;
 
 // 관리자 로그인 토큰. 쿠키 대신 헤더로 보내는 이유는 AdminAuthFilter 주석 참고 —
 // 프론트(Vercel)·백엔드(Render)가 서로 다른 도메인이라 쿠키 세션보다 훨씬 단순하다.

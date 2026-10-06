@@ -1,0 +1,22 @@
+$ ./gradlew bootJar
+$ java -jar build/libs/reservation-0.0.1-SNAPSHOT.jar
+
+ :: Spring Boot ::                (v4.1.1)
+
+INFO  ReservationApplication   : Starting ReservationApplication v0.0.1-SNAPSHOT using Java 17.0.20.1
+INFO  ReservationApplication   : No active profile set, falling back to 1 default profile: "default"
+INFO  TomcatWebServer          : Tomcat initialized with port 8080 (http)
+INFO  StandardEngine           : Starting Servlet engine: [Apache Tomcat/11.0.24]
+INFO  TomcatWebServer          : Tomcat started on port 8080 (http) with context path '/'
+INFO  ReservationApplication   : Started ReservationApplication in 1.37 seconds
+
+$ curl -i http://localhost:8080/rooms
+HTTP/1.1 200
+Content-Type: application/json
+
+[{"id":1,"name":"오션뷰 디럭스","capacity":2,"price":180000},{"id":2,"name":"패밀리 스위트","capacity":4,"price":320000}]
+
+$ curl -i http://localhost:8080/nothing
+HTTP/1.1 404
+
+# (2026-10-06 실제 실행 결과. 로그는 날짜·스레드 부분을 줄였고, 포트는 기본값 8080으로 바꿔 적었습니다.)

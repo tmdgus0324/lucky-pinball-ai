@@ -39,6 +39,9 @@ export function Layout() {
                 <NavLink to="/study/react" className={({ isActive }) => (isActive ? 'active' : '')}>
                   React
                 </NavLink>
+                <NavLink to="/study/spring" className={({ isActive }) => (isActive ? 'active' : '')}>
+                  Spring Boot
+                </NavLink>
               </div>
             )}
           </div>

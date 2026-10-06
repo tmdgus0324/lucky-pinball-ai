@@ -1162,3 +1162,55 @@ table.admin-table th {
 .notes-view.hide-ai .ai-comment {
   display: none;
 }
+
+/* 공부하기 > Spring Boot */
+.study-part {
+  margin-top: 24px;
+}
+
+.study-part-title {
+  margin: 0 0 10px;
+  font-size: 15px;
+  color: var(--accent);
+}
+
+.study-card.disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.study-card.disabled:hover {
+  border-color: var(--border);
+}
+
+.study-soon {
+  margin-left: 8px;
+}
+
+.live-requests {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.live-request {
+  padding: 14px;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  min-width: 0;
+}
+
+.live-request h3 {
+  margin: 0;
+  font-size: 15px;
+}
+
+.live-status {
+  margin: 10px 0 6px;
+  color: var(--muted);
+}
+
+.live-status strong {
+  color: var(--accent);
+}
