@@ -1,0 +1,48 @@
+# 모든 오류 응답이 {"code","message","details"} 한 가지 모양이다.
+
+$ curl ... -d '{"roomId":1,"guestName":"김민수","checkIn":"2026-11-01","nights":2}' .../reservations  → 201
+{"id":1,"roomId":1,"guestName":"김민수","checkIn":"2026-11-01","nights":2}
+
+# 같은 객실, 같은 날짜로 한 번 더 → 업무 규칙 위반 409
+$ curl ... -d '{"roomId":1,"guestName":"이영희","checkIn":"2026-11-01","nights":1}' .../reservations  → 409
+{"code":"ROOM_ALREADY_BOOKED","message":"1번 객실은 2026-11-01에 이미 예약되어 있습니다","details":[]}
+WARN  GlobalExceptionHandler : 업무 오류 ROOM_ALREADY_BOOKED: 1번 객실은 2026-11-01에 이미 예약되어 있습니다
+
+$ curl http://localhost:8080/reservations/99  → 404
+{"code":"RESERVATION_NOT_FOUND","message":"예약을 찾을 수 없습니다: 99","details":[]}
+WARN  GlobalExceptionHandler : 업무 오류 RESERVATION_NOT_FOUND: 예약을 찾을 수 없습니다: 99
+
+# 검증 실패 → 필드별 이유를 모두 돌려준다
+$ curl ... -d '{"guestName":" ","checkIn":"2026-11-01","nights":0}' .../reservations  → 400
+{"code":"INVALID_INPUT","message":"입력값을 확인해 주세요",
+ "details":["guestName: 예약자 이름을 입력해 주세요","nights: 1박 이상이어야 합니다","roomId: 객실을 선택해 주세요"]}
+
+$ curl ... -d '{"roomId":1,' .../reservations  → 400
+{"code":"BAD_FORMAT","message":"요청 형식이 올바르지 않습니다","details":[]}
+
+# 예상하지 못한 오류 → 응답에는 내부 사정을 싣지 않고, 로그에 스택 트레이스를 남긴다
+$ curl http://localhost:8080/reservations/broken  → 500
+{"code":"INTERNAL_ERROR","message":"잠시 후 다시 시도해 주세요","details":[]}
+ERROR GlobalExceptionHandler : 처리하지 못한 예외
+java.lang.NullPointerException: Cannot invoke "String.trim()" because "roomName" is null
+	at com.example.reservation.reservation.ReservationController.broken(ReservationController.java:51)
+	...
+
+$ curl http://localhost:8080/nothing  → 404
+{"code":"NOT_FOUND","message":"없는 주소입니다","details":[]}
+
+$ curl -X PUT http://localhost:8080/reservations/1  → 405
+{"code":"METHOD_NOT_ALLOWED","message":"지원하지 않는 요청 방식입니다","details":[]}
+
+
+# ---- 함정: NoResourceFoundException, HttpRequestMethodNotSupportedException 처리기를 빼고 실행하면 ----
+$ curl http://localhost:8080/nothing  → 500   (404여야 하는데)
+{"code":"INTERNAL_ERROR","message":"잠시 후 다시 시도해 주세요","details":[]}
+ERROR GlobalExceptionHandler : 처리하지 못한 예외
+org.springframework.web.servlet.resource.NoResourceFoundException: No static resource nothing for request '/nothing'.
+
+$ curl -X PUT http://localhost:8080/reservations/1  → 500   (405여야 하는데)
+ERROR GlobalExceptionHandler : 처리하지 못한 예외
+org.springframework.web.HttpRequestMethodNotSupportedException: Request method 'PUT' is not supported
+
+# (2026-10-06 실제 실행 결과. 로그는 줄였고 포트는 8080으로 바꿔 적었습니다.)

@@ -1,0 +1,32 @@
+$ java -jar build/libs/reservation-0.0.1-SNAPSHOT.jar
+
+# 스프링이 빈을 만드는 순서가 로그에 보인다.
+# RoomService는 RoomRepository가 있어야 만들 수 있으므로, 저장소가 먼저 만들어지고 @PostConstruct가 실행된다.
+INFO   c.e.reservation.room.RoomRepository     : 객실 2개를 준비했습니다
+INFO   c.example.reservation.room.RoomService  : RoomService를 만들었습니다
+INFO   c.e.reservation.ReservationApplication  : Started ReservationApplication in 1.444 seconds
+
+$ curl http://localhost:8080/rooms
+[{"id":1,"name":"오션뷰 디럭스","capacity":2,"price":180000},{"id":2,"name":"패밀리 스위트","capacity":4,"price":320000}]
+
+$ curl http://localhost:8080/rooms/1/price
+180000
+# 실행한 날(2026-10-06)이 화요일이라 평일 가격이다.
+
+# 요청을 여러 번 보내도 "RoomService를 만들었습니다"는 다시 찍히지 않는다. 빈은 하나만 만들어 계속 쓴다(싱글톤).
+
+
+# ---- AppConfig.java를 지우고 다시 실행하면 ----
+***************************
+APPLICATION FAILED TO START
+***************************
+
+Description:
+
+Parameter 1 of constructor in com.example.reservation.room.RoomService required a bean of type 'java.time.Clock' that could not be found.
+
+Action:
+
+Consider defining a bean of type 'java.time.Clock' in your configuration.
+
+# (2026-10-06 실제 실행 결과. 날짜·PID·스레드 부분은 줄였고 포트는 8080으로 바꿔 적었습니다.)

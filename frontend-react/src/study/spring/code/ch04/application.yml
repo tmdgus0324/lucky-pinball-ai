@@ -1,0 +1,12 @@
+# 모든 환경에 공통인 설정
+spring:
+  application:
+    name: reservation
+  profiles:
+    # 아무것도 지정하지 않으면 dev로 뜬다. 운영 서버는 실행할 때 prod를 준다.
+    active: dev
+
+reservation:
+  max-nights: 14
+  checkin-time: "15:00"
+  notice: 체크인은 15시부터입니다.

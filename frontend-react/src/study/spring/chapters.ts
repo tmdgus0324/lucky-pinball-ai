@@ -11,6 +11,8 @@ export interface LiveRequestSpec {
   /** 백엔드 주소 뒤에 붙는 경로(/api/...) */
   path: string;
   body?: unknown;
+  /** JSON이 아닌 글자를 그대로 보낼 때(깨진 JSON 예시 등). body보다 우선한다 */
+  rawBody?: string;
   /** 무엇을 확인하는 요청인지 */
   note: string;
 }
@@ -43,7 +45,7 @@ export const SPRING_CHAPTERS: SpringChapter[] = [
     title: '프로젝트 구조와 실행',
     summary: 'Initializr로 만든 프로젝트의 폴더 구조, Gradle 명령, application.yml.',
     keywords: ['Gradle', 'application.yml', 'bootRun'],
-    files: [],
+    files: ['application.yml', 'RoomController.java', 'structure.txt', 'settings.gradle', 'build.gradle', 'ReservationApplication.java', 'Room.java', 'output.txt'],
   },
   {
     id: 'ch03',
@@ -51,7 +53,7 @@ export const SPRING_CHAPTERS: SpringChapter[] = [
     title: 'IoC/DI와 Bean',
     summary: '객체를 스프링이 만들고 연결해 주는 방식. @Component, 생성자 주입, @Bean, 싱글톤.',
     keywords: ['DI', '@Service', '생성자 주입', '@Bean'],
-    files: [],
+    files: ['RoomService.java', 'RoomRepository.java', 'AppConfig.java', 'RoomController.java', 'Room.java', 'ReservationApplication.java', 'build.gradle', 'output.txt'],
   },
   {
     id: 'ch04',
@@ -59,7 +61,7 @@ export const SPRING_CHAPTERS: SpringChapter[] = [
     title: '설정값과 프로필',
     summary: '@Value, @ConfigurationProperties, 개발·운영 설정 분리, 환경변수로 덮어쓰기.',
     keywords: ['@Value', 'profile', '환경변수'],
-    files: [],
+    files: ['application.yml', 'application-dev.yml', 'application-prod.yml', 'ReservationProperties.java', 'PolicyController.java', 'ReservationApplication.java', 'build.gradle', 'output.txt'],
   },
   {
     id: 'ch05',
@@ -67,7 +69,7 @@ export const SPRING_CHAPTERS: SpringChapter[] = [
     title: '요청 처리 흐름',
     summary: '요청이 필터, DispatcherServlet, 인터셉터를 거쳐 컨트롤러까지 가는 길. "어디서 막혔나" 찾기.',
     keywords: ['DispatcherServlet', '필터', '인터셉터'],
-    files: [],
+    files: ['RequestLogFilter.java', 'TimingInterceptor.java', 'WebConfig.java', 'RoomController.java', 'Room.java', 'ReservationApplication.java', 'build.gradle', 'output.txt'],
   },
   {
     id: 'ch06',
@@ -75,7 +77,28 @@ export const SPRING_CHAPTERS: SpringChapter[] = [
     title: 'REST 컨트롤러',
     summary: 'URL과 HTTP 메서드를 메서드에 연결하고, 요청 값을 받고, 상태 코드를 정해 응답합니다.',
     keywords: ['@GetMapping', '@PathVariable', '@RequestBody', 'ResponseEntity'],
-    files: [],
+    files: ['ReservationController.java', 'CreateReservationRequest.java', 'Reservation.java', 'ReservationApplication.java', 'build.gradle', 'output.txt'],
+    live: [
+      {
+        label: '조회: 재사용할 수 있는 참가자 목록',
+        method: 'GET',
+        path: '/api/players/reusable',
+        note: '정상 조회는 200과 JSON 배열입니다. 데이터를 바꾸지 않는 GET 요청입니다.',
+      },
+      {
+        label: '없는 자원: 없는 게임의 결과',
+        method: 'GET',
+        path: '/api/game/result/no-such-game',
+        note: '주소의 {gameId} 자리에 없는 값을 넣으면 404입니다.',
+      },
+      {
+        label: '깨진 JSON으로 참가자 등록',
+        method: 'POST',
+        path: '/api/player',
+        rawBody: '{"name":',
+        note: 'JSON이 중간에 끊겼습니다. 본문을 객체로 바꾸지 못해 컨트롤러가 실행되지 않고 400이 납니다(저장되지 않음).',
+      },
+    ],
   },
   {
     id: 'ch07',
@@ -83,7 +106,30 @@ export const SPRING_CHAPTERS: SpringChapter[] = [
     title: '요청 검증',
     summary: '@Valid와 Bean Validation으로 잘못된 입력을 컨트롤러 앞에서 막습니다.',
     keywords: ['@Valid', '@NotBlank', '@Size'],
-    files: [],
+    files: ['CreateReservationRequest.java', 'ReservationController.java', 'build.gradle', 'ReservationApplication.java', 'output.txt'],
+    live: [
+      {
+        label: '빈 이름',
+        method: 'POST',
+        path: '/api/player',
+        body: { name: '' },
+        note: '@NotBlank 위반. 검증에 실패하면 컨트롤러가 실행되지 않아 저장되지 않습니다.',
+      },
+      {
+        label: '21자 이름',
+        method: 'POST',
+        path: '/api/player',
+        body: { name: '가나다라마바사아자차카타파하가나다라마바사' },
+        note: '@Size(max = 20) 위반.',
+      },
+      {
+        label: '미래의 생년월일',
+        method: 'POST',
+        path: '/api/player',
+        body: { name: '테스트', birthDate: '2999-01-01' },
+        note: '@Past 위반. 응답 문구가 영어인 것은 message를 따로 적지 않아 서버 언어를 따랐기 때문입니다.',
+      },
+    ],
   },
   {
     id: 'ch08',
@@ -91,7 +137,28 @@ export const SPRING_CHAPTERS: SpringChapter[] = [
     title: '예외 처리',
     summary: '@RestControllerAdvice로 오류 응답 형식을 한곳에서 맞춥니다.',
     keywords: ['@ExceptionHandler', '공통 오류 응답'],
-    files: [],
+    files: ['GlobalExceptionHandler.java', 'ReservationException.java', 'ErrorResponse.java', 'ReservationController.java', 'CreateReservationRequest.java', 'Reservation.java', 'ReservationApplication.java', 'build.gradle', 'output.txt'],
+    live: [
+      {
+        label: '업무 예외: 없는 게임',
+        method: 'GET',
+        path: '/api/game/result/no-such-game',
+        note: '서비스가 던진 ApiException을 GlobalExceptionHandler가 404와 {error, traceId}로 바꿉니다.',
+      },
+      {
+        label: '형식 오류: 있을 수 없는 날짜',
+        method: 'POST',
+        path: '/api/player',
+        rawBody: '{"name":"테스트","birthDate":"1990-13-45"}',
+        note: '13월 45일은 날짜로 바꿀 수 없습니다. HttpMessageNotReadableException을 따로 잡아 500이 아니라 400으로 응답합니다.',
+      },
+      {
+        label: '없는 주소',
+        method: 'GET',
+        path: '/api/nothing',
+        note: 'NoResourceFoundException을 따로 잡아 본문 없는 404로 조용히 응답합니다(봇 요청이 오류 로그를 채우지 않게).',
+      },
+    ],
   },
   {
     id: 'ch09',
@@ -99,7 +166,7 @@ export const SPRING_CHAPTERS: SpringChapter[] = [
     title: '세션·쿠키 로그인',
     summary: 'HttpSession과 쿠키로 하는 로그인, 로그인 확인 인터셉터. 토큰 방식과 비교합니다.',
     keywords: ['HttpSession', '쿠키', '인터셉터'],
-    files: [],
+    files: ['LoginController.java', 'LoginCheckInterceptor.java', 'WebConfig.java', 'MyReservationController.java', 'LoginMember.java', 'application.yml', 'ReservationApplication.java', 'build.gradle', 'output.txt'],
   },
   {
     id: 'ch10',

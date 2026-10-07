@@ -1,0 +1,14 @@
+# src/main/resources/application.yml
+# 서버와 애플리케이션의 기본 설정. 직접 만든 설정값은 4장에서 더한다.
+server:
+  port: 8080
+
+spring:
+  application:
+    name: reservation
+
+logging:
+  level:
+    # 우리 코드(com.example.reservation 아래)의 로그는 DEBUG까지 보여 준다.
+    # 다른 라이브러리는 기본값(INFO)을 그대로 쓴다.
+    com.example.reservation: debug

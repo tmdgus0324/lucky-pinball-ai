@@ -1,0 +1,12 @@
+server:
+  servlet:
+    session:
+      # 마지막 요청 뒤 30분 동안 요청이 없으면 세션이 사라진다(자동 로그아웃).
+      timeout: 30m
+      # 세션 ID를 주소(;jsessionid=...)에 붙이지 않고 쿠키로만 주고받는다.
+      tracking-modes: cookie
+      cookie:
+        # 자바스크립트(document.cookie)로 쿠키를 읽지 못하게 한다. XSS로 세션을 훔치는 것을 막는다.
+        http-only: true
+        # 다른 사이트에서 보낸 요청에는 쿠키를 붙이지 않는다(CSRF 완화).
+        same-site: lax

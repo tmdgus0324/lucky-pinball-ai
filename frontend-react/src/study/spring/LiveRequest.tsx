@@ -26,6 +26,8 @@ function LiveRequestItem({ spec }: { spec: LiveRequestSpec }) {
   const [error, setError] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
 
+  const bodyText = spec.rawBody ?? (spec.body === undefined ? undefined : JSON.stringify(spec.body));
+
   async function send() {
     setSending(true);
     setError(null);
@@ -33,8 +35,8 @@ function LiveRequestItem({ spec }: { spec: LiveRequestSpec }) {
     try {
       const response = await fetch(BACKEND_ORIGIN + spec.path, {
         method: spec.method,
-        headers: spec.body === undefined ? undefined : { 'Content-Type': 'application/json' },
-        body: spec.body === undefined ? undefined : JSON.stringify(spec.body),
+        headers: bodyText === undefined ? undefined : { 'Content-Type': 'application/json' },
+        body: bodyText,
       });
       const body = await response.text();
       setResult({ status: response.status, elapsedMs: Math.round(performance.now() - started), body: pretty(body) });
@@ -46,8 +48,8 @@ function LiveRequestItem({ spec }: { spec: LiveRequestSpec }) {
     }
   }
 
-  const request =
-    `${spec.method} ${spec.path}` + (spec.body === undefined ? '' : `\nContent-Type: application/json\n\n${JSON.stringify(spec.body, null, 2)}`);
+  const shownBody = spec.rawBody ?? (spec.body === undefined ? undefined : JSON.stringify(spec.body, null, 2));
+  const request = `${spec.method} ${spec.path}` + (shownBody === undefined ? '' : `\nContent-Type: application/json\n\n${shownBody}`);
 
   return (
     <div className="live-request">

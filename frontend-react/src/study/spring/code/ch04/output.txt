@@ -1,0 +1,27 @@
+# 1) 아무것도 주지 않고 실행 → application.yml의 spring.profiles.active: dev
+$ java -jar reservation.jar
+INFO  ReservationApplication : The following 1 profile is active: "dev"
+$ curl http://localhost:8080/policy
+{"app":"reservation","activeProfiles":["dev"],"maxNights":14,"checkinTime":"15:00","notice":"[개발 서버] 실제 예약이 아닙니다."}
+# notice는 application-dev.yml 값, maxNights는 application.yml 값
+
+# 2) prod 프로필로 실행
+$ java -jar reservation.jar --spring.profiles.active=prod
+INFO  ReservationApplication : The following 1 profile is active: "prod"
+$ curl http://localhost:8080/policy
+{"app":"reservation","activeProfiles":["prod"],"maxNights":7,"checkinTime":"15:00","notice":"체크인은 15시부터입니다."}
+# maxNights는 application-prod.yml 값(7), notice는 prod 파일에 없어서 application.yml 값
+
+# 3) 환경변수로 덮어쓰기 (reservation.max-nights → RESERVATION_MAXNIGHTS)
+$ RESERVATION_MAXNIGHTS=3 java -jar reservation.jar
+$ curl http://localhost:8080/policy
+{"app":"reservation","activeProfiles":["dev"],"maxNights":3,"checkinTime":"15:00","notice":"[개발 서버] 실제 예약이 아닙니다."}
+
+# 4) 환경변수와 명령줄 인자를 같이 주면 명령줄 인자가 이긴다
+$ RESERVATION_MAXNIGHTS=3 java -jar reservation.jar --reservation.max-nights=5
+$ curl http://localhost:8080/policy
+{"app":"reservation","activeProfiles":["dev"],"maxNights":5,"checkinTime":"15:00","notice":"[개발 서버] 실제 예약이 아닙니다."}
+
+# (2026-10-06 실제 실행 결과. jar 이름과 포트는 줄여 적었습니다.)
+# 참고: RESERVATION_MAX_NIGHTS(대시 자리에 밑줄)로 줘도 이 예제에서는 똑같이 3이 들어갔습니다.
+#       공식 문서가 권장하는 형식은 대시를 빼는 RESERVATION_MAXNIGHTS입니다.

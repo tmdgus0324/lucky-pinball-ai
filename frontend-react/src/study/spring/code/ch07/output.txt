@@ -1,0 +1,40 @@
+# 올바른 요청
+$ curl ... -d '{"roomId":1,"guestName":"김민수","checkIn":"2026-11-01","nights":2}' .../reservations  → 201
+예약 접수: 김민수
+
+# 잘못된 요청 (이 본문을 아래 세 요청에 똑같이 보낸다)
+# {"guestName":"","checkIn":"2020-01-01","nights":30,"email":"not-an-email"}   ← roomId도 빠짐
+
+# 1) @Valid만: 컨트롤러 메서드는 실행되지 않고 스프링이 400. 응답에는 이유가 없다.
+$ curl ... .../reservations  → 400
+{"timestamp":"2026-10-06T11:01:11.699Z","status":400,"error":"Bad Request","path":"/reservations"}
+WARN DefaultHandlerExceptionResolver : Resolved [org.springframework.web.bind.MethodArgumentNotValidException:
+     Validation failed for argument [0] in public ... ReservationController.create(...) with 5 errors:
+     [Field error in object 'createReservationRequest' on field 'email': rejected value [not-an-email]; ...
+
+# 2) BindingResult로 직접 응답: 필드마다 이유를 돌려준다
+$ curl ... .../reservations/checked  → 400
+{"guestName":"예약자 이름을 입력해 주세요",
+ "email":"올바른 형식의 이메일 주소여야 합니다",
+ "roomId":"널이어서는 안됩니다",
+ "nights":"14 이하여야 합니다",
+ "checkIn":"체크인은 오늘 이후여야 합니다"}
+
+# 3) 같은 요청에 Accept-Language: en을 붙이면 기본 문구만 영어로 바뀐다
+$ curl -H "Accept-Language: en" ... .../reservations/checked  → 400
+{"email":"must be a well-formed email address",
+ "nights":"must be less than or equal to 14",
+ "checkIn":"체크인은 오늘 이후여야 합니다",
+ "roomId":"must not be null",
+ "guestName":"예약자 이름을 입력해 주세요"}
+
+# 4) 주소 값 검증(@Positive)
+$ curl http://localhost:8080/reservations/-1  → 400
+{"timestamp":"2026-10-06T11:01:11.800Z","status":400,"error":"Bad Request","path":"/reservations/-1"}
+# 기본 로그 레벨에서는 서버 로그에 아무것도 남지 않는다.
+# logging.level.org.springframework.web=debug로 올리면 그제야 보인다.
+DEBUG ResponseStatusExceptionResolver : Resolved [org.springframework.web.method.annotation.HandlerMethodValidationException:
+      400 BAD_REQUEST "Validation failure"]
+
+# (2026-10-06 실제 실행 결과. 긴 로그는 줄였고 포트는 8080으로 바꿔 적었습니다.)
+# 필드 순서는 실행할 때마다 달라질 수 있습니다.

@@ -1,0 +1,34 @@
+# 1) 로그인 없이 → 인터셉터가 막음
+$ curl http://localhost:8080/reservations/my              → 401
+로그인이 필요합니다
+INFO  LoginCheckInterceptor : 로그인 안 됨: /reservations/my
+
+# 2) 제외한 주소는 로그인 없이 됨
+$ curl http://localhost:8080/reservations/public          → 200
+누구나 볼 수 있는 안내입니다
+
+# 3) 비밀번호 틀림
+$ curl ... -d '{"loginId":"guest1","password":"wrong"}' .../login   → 401
+아이디 또는 비밀번호가 맞지 않습니다
+
+# 4) 로그인 성공 → 톰캣이 세션 ID를 쿠키로 보낸다 (-c: 받은 쿠키를 파일에 저장)
+$ curl -i -c cookies.txt ... -d '{"loginId":"guest1","password":"pass1234"}' .../login
+HTTP/1.1 200
+Set-Cookie: JSESSIONID=B6EDC1D9478C80F866B50D6BEEEDF8EC; Path=/; HttpOnly; SameSite=Lax
+Content-Type: text/plain;charset=UTF-8
+
+김민수님 로그인
+
+# 5) 쿠키를 붙여서 요청 (-b: 저장한 쿠키를 보냄) → 서버가 세션을 찾아 로그인 상태로 처리
+$ curl -b cookies.txt http://localhost:8080/reservations/my   → 200
+김민수님의 예약 목록입니다
+
+# 6) 로그아웃 → 서버에서 세션을 지움
+$ curl -b cookies.txt -X POST http://localhost:8080/logout    → 204
+
+# 7) 같은 쿠키로 다시 요청 → 서버에 그 세션이 없으므로 로그인 안 된 상태
+$ curl -b cookies.txt http://localhost:8080/reservations/my   → 401
+로그인이 필요합니다
+
+# (2026-10-06 실제 실행 결과. 포트는 8080으로 바꿔 적었습니다.)
+# Set-Cookie에 HttpOnly와 SameSite=Lax가 붙은 것은 application.yml 설정 때문입니다.

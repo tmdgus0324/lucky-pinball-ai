@@ -1,0 +1,23 @@
+# application.yml에는 server.port: 8080이 적혀 있지만, 실행할 때 준 값이 이긴다(4장).
+$ java -jar build/libs/reservation-0.0.1-SNAPSHOT.jar --server.port=9090
+
+INFO   c.e.reservation.ReservationApplication : Starting ReservationApplication v0.0.1-SNAPSHOT using Java 17.0.20.1
+DEBUG  c.e.reservation.ReservationApplication : Running with Spring Boot v4.1.1, Spring v7.0.9
+INFO   c.e.reservation.ReservationApplication : No active profile set, falling back to 1 default profile: "default"
+INFO   o.s.boot.tomcat.TomcatWebServer        : Tomcat initialized with port 9090 (http)
+INFO   o.apache.catalina.core.StandardEngine  : Starting Servlet engine: [Apache Tomcat/11.0.24]
+INFO   o.s.boot.tomcat.TomcatWebServer        : Tomcat started on port 9090 (http) with context path '/'
+INFO   c.e.reservation.ReservationApplication : Started ReservationApplication in 1.43 seconds
+
+$ curl -i http://localhost:9090/rooms
+HTTP/1.1 200
+Content-Type: application/json
+
+[{"id":1,"name":"오션뷰 디럭스","capacity":2,"price":180000},{"id":2,"name":"패밀리 스위트","capacity":4,"price":320000}]
+
+# 첫 요청이 들어올 때 DispatcherServlet이 준비되고(5장), 우리 코드의 DEBUG 로그가 찍힌다.
+INFO   o.s.web.servlet.DispatcherServlet      : Initializing Servlet 'dispatcherServlet'
+DEBUG  com.example.reservation.RoomController : 객실 목록 요청
+
+# (2026-10-06 실제 실행 결과. 날짜·PID·스레드 부분은 줄였습니다.)
+# "Running with Spring Boot..." 줄은 우리 패키지를 debug로 열어서 같이 보이는 DEBUG 로그입니다.

@@ -1,0 +1,2 @@
+// 프로젝트 이름. 빌드한 jar 이름(reservation-0.0.1-SNAPSHOT.jar)의 앞부분이 된다.
+rootProject.name = 'reservation'

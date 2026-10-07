@@ -1,0 +1,48 @@
+$ curl -i -H "Content-Type: application/json" \
+       -d '{"roomId":1,"guestName":"김민수","checkIn":"2026-11-01","nights":2}' http://localhost:8080/reservations
+HTTP/1.1 201
+Location: /reservations/1
+Content-Type: application/json
+
+{"id":1,"roomId":1,"guestName":"김민수","checkIn":"2026-11-01","nights":2}
+
+$ curl ... -d '{"roomId":2,"guestName":"이영희","checkIn":"2026-11-03","nights":1}' .../reservations
+{"id":2,"roomId":2,"guestName":"이영희","checkIn":"2026-11-03","nights":1}
+
+$ curl http://localhost:8080/reservations
+[{"id":1,"roomId":1,"guestName":"김민수",...},{"id":2,"roomId":2,"guestName":"이영희",...}]
+
+$ curl "http://localhost:8080/reservations?roomId=1"
+[{"id":1,"roomId":1,"guestName":"김민수","checkIn":"2026-11-01","nights":2}]
+
+$ curl http://localhost:8080/reservations/1          → 200
+{"id":1,"roomId":1,"guestName":"김민수","checkIn":"2026-11-01","nights":2}
+
+$ curl http://localhost:8080/reservations/99         → 404 (본문 없음)
+$ curl -X DELETE http://localhost:8080/reservations/1 → 204 (본문 없음)
+
+
+# ---- 잘못된 요청들: 응답 본문에는 이유가 없고, 이유는 서버 로그(WARN)에만 남는다 ----
+
+$ curl http://localhost:8080/reservations/abc        → 400
+{"timestamp":"2026-10-06T10:52:21.823Z","status":400,"error":"Bad Request","path":"/reservations/abc"}
+WARN DefaultHandlerExceptionResolver : Resolved [MethodArgumentTypeMismatchException: Method parameter 'id':
+     Failed to convert value of type 'java.lang.String' to required type 'java.lang.Long'; For input string: "abc"]
+
+$ curl ... -d '{"roomId":1,"guestName":' .../reservations   → 400 (JSON이 중간에 끊김)
+{"timestamp":"2026-10-06T10:52:21.851Z","status":400,"error":"Bad Request","path":"/reservations"}
+WARN DefaultHandlerExceptionResolver : Resolved [HttpMessageNotReadableException:
+     JSON parse error: Unexpected end-of-input within/between Object entries]
+
+$ curl ... -d '{"roomId":1,"guestName":"박지훈","checkIn":"11월 1일","nights":1}' .../reservations → 400
+{"timestamp":"2026-10-06T10:52:21.907Z","status":400,"error":"Bad Request","path":"/reservations"}
+WARN DefaultHandlerExceptionResolver : Resolved [HttpMessageNotReadableException:
+     JSON parse error: Cannot deserialize value of type `java.time.LocalDate` from String "11월 1일" ...]
+
+$ curl -X PUT ... http://localhost:8080/reservations/2 → 405
+{"timestamp":"2026-10-06T10:52:21.884Z","status":405,"error":"Method Not Allowed","path":"/reservations/2"}
+WARN DefaultHandlerExceptionResolver : Resolved [HttpRequestMethodNotSupportedException: Request method 'PUT' is not supported]
+
+# (2026-10-06 실제 실행 결과. 긴 JSON은 ...으로 줄였고 포트는 8080으로 바꿔 적었습니다.)
+# 참고: 윈도우 명령 창에서 curl에 한글 JSON을 직접 넣으면 UTF-8이 깨져 400이 납니다.
+#       실제로는 JSON을 UTF-8 파일로 저장하고 curl --data-binary @파일 로 보냈습니다.

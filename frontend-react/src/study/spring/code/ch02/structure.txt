@@ -1,0 +1,23 @@
+reservation/
+├── build.gradle                 의존성과 빌드 설정
+├── settings.gradle              프로젝트 이름
+├── gradlew, gradlew.bat         Gradle 래퍼(설치 없이 정해진 버전의 Gradle로 빌드)
+├── gradle/wrapper/              래퍼가 쓰는 파일(버전 정보 등)
+└── src/
+    ├── main/
+    │   ├── java/com/example/reservation/
+    │   │   ├── ReservationApplication.java   main 메서드, 가장 위 패키지에 둔다
+    │   │   ├── Room.java
+    │   │   └── RoomController.java
+    │   └── resources/
+    │       ├── application.yml  설정 파일
+    │       ├── static/          정적 파일(이미지, css, js). 주소 그대로 응답된다
+    │       └── templates/       서버에서 HTML을 만들 때 쓰는 템플릿(16장)
+    └── test/java/com/example/reservation/
+        └── ReservationApplicationTests.java   테스트(17장)
+
+빌드 결과
+build/
+├── classes/                     컴파일된 .class 파일
+└── libs/
+    └── reservation-0.0.1-SNAPSHOT.jar        실행 가능한 jar

@@ -1,0 +1,8 @@
+# prod 프로필일 때만 읽는다.
+reservation:
+  # 운영은 성수기 정책으로 최대 7박
+  max-nights: 7
+
+logging:
+  level:
+    com.example.reservation: info

@@ -1,0 +1,30 @@
+plugins {
+    id 'java'
+    id 'org.springframework.boot' version '4.1.1'
+    id 'io.spring.dependency-management' version '1.1.7'
+}
+
+group = 'com.example'
+version = '0.0.1-SNAPSHOT'
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(17)
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    // 버전은 적지 않는다. Spring Boot가 서로 맞는 버전을 골라 준다.
+    implementation 'org.springframework.boot:spring-boot-starter-webmvc'
+    // 입력 검증(Bean Validation). @NotBlank, @Size 같은 애너테이션을 쓸 수 있게 한다.
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
+}
+
+// 윈도우에서 한글 주석이 깨지지 않게 소스 파일을 UTF-8로 읽는다.
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+}
