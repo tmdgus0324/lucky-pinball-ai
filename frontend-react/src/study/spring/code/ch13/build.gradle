@@ -1,0 +1,30 @@
+plugins {
+    id 'java'
+    id 'org.springframework.boot' version '4.1.1'
+    id 'io.spring.dependency-management' version '1.1.7'
+}
+
+group = 'com.example'
+version = '0.0.1-SNAPSHOT'
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(17)
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation 'org.springframework.boot:spring-boot-starter-webmvc'
+    // JPA(Hibernate)와 Spring Data JPA. 버전은 Spring Boot가 관리한다.
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+    // 예제는 메모리 DB(H2)를 쓴다.
+    runtimeOnly 'com.h2database:h2'
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+}

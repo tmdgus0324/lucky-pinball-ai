@@ -1,0 +1,36 @@
+# 네 경우 모두 "예약 저장 → 결제 실패(예외)". 실패한 뒤 DB에 예약이 남았는지 본다.
+# JpaTransactionManager 로그(debug)로 트랜잭션이 시작·커밋·롤백되는 모습이 보인다.
+
+# 1) RuntimeException → 롤백. 예약이 남지 않는다 (정상)
+$ curl -X POST http://localhost:8080/tx/runtime
+실패(결제 서버 응답 없음) / 예약 수 0 → 0
+DEBUG JpaTransactionManager : Creating new transaction with name [ReservationService.reserveWithRuntimeFailure]: PROPAGATION_REQUIRED,ISOLATION_DEFAULT
+DEBUG JpaTransactionManager : Participating in existing transaction        ← repository.save가 같은 트랜잭션에 참여
+DEBUG JpaTransactionManager : Initiating transaction rollback
+DEBUG JpaTransactionManager : Rolling back JPA transaction ...
+
+# 2) checked 예외 → 기본 설정은 커밋! 결제는 실패했는데 예약이 남는다 (함정)
+$ curl -X POST http://localhost:8080/tx/checked
+실패(카드 한도 초과) / 예약 수 0 → 1
+DEBUG JpaTransactionManager : Creating new transaction with name [ReservationService.reserveWithCheckedFailure]: PROPAGATION_REQUIRED,ISOLATION_DEFAULT
+DEBUG JpaTransactionManager : Participating in existing transaction
+DEBUG JpaTransactionManager : Initiating transaction commit                ← 예외가 났는데 커밋
+DEBUG JpaTransactionManager : Committing JPA transaction ...
+
+# 3) rollbackFor = Exception.class → checked 예외도 롤백. 예약 수가 그대로다 (정상)
+$ curl -X POST http://localhost:8080/tx/checked-rollback
+실패(카드 한도 초과) / 예약 수 1 → 1
+DEBUG JpaTransactionManager : Creating new transaction with name [ReservationService.reserveWithCheckedFailureRollback]: PROPAGATION_REQUIRED,ISOLATION_DEFAULT,-java.lang.Exception
+DEBUG JpaTransactionManager : Initiating transaction rollback
+DEBUG JpaTransactionManager : Rolling back JPA transaction ...
+
+# 4) 같은 클래스 안에서 @Transactional 메서드 호출 → 트랜잭션이 시작되지 않는다 (함정)
+$ curl -X POST http://localhost:8080/tx/self-call
+실패(결제 서버 응답 없음) / 예약 수 1 → 2
+INFO  ReservationService    : saveAndFail 안에서 트랜잭션 진행 중인가? false
+DEBUG JpaTransactionManager : Creating new transaction with name [SimpleJpaRepository.save]: PROPAGATION_REQUIRED,ISOLATION_DEFAULT
+DEBUG JpaTransactionManager : Initiating transaction commit                ← save가 혼자 트랜잭션을 열고 바로 커밋
+DEBUG JpaTransactionManager : Committing JPA transaction ...
+# saveAndFail의 @Transactional은 무시됐다. 예외가 나도 되돌릴 트랜잭션이 없어서 예약이 남았다.
+
+# (2026-10-08 실제 실행 결과. 클래스 이름 앞의 패키지와, 예약 수를 세는 count 쿼리의 트랜잭션 로그는 줄였습니다.)

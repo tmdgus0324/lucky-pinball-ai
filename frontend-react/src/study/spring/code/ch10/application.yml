@@ -1,0 +1,18 @@
+spring:
+  datasource:
+    # 서버가 떠 있는 동안만 있는 메모리 DB. 시작할 때 schema.sql, data.sql을 실행한다.
+    url: jdbc:h2:mem:reservation
+    username: sa
+    password:
+
+mybatis:
+  # Mapper XML 파일 위치(src/main/resources/mapper/)
+  mapper-locations: classpath:mapper/*.xml
+  configuration:
+    # DB 컬럼 check_in → 자바 필드 checkIn 으로 자동 연결
+    map-underscore-to-camel-case: true
+
+logging:
+  level:
+    # Mapper 패키지를 debug로 열면 실행한 SQL과 파라미터가 로그에 찍힌다. 운영 장애 분석에 가장 많이 쓴다.
+    com.example.reservation.reservation: debug

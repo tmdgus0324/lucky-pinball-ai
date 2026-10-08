@@ -1,0 +1,14 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:reservation
+    username: sa
+    password:
+  jpa:
+    hibernate:
+      ddl-auto: create
+    # 끄면 트랜잭션(서비스) 밖에서 지연 로딩을 할 수 없다. 켜 두면 요청이 끝날 때까지 DB 연결을 붙잡는다(아래 정리 참고).
+    open-in-view: false
+
+logging:
+  level:
+    org.hibernate.SQL: debug

@@ -174,7 +174,7 @@ export const SPRING_CHAPTERS: SpringChapter[] = [
     title: 'MyBatis 기초',
     summary: 'Mapper 인터페이스와 XML, #{}와 ${}의 차이, 동적 SQL. 운영에서 가장 많이 보는 SQL 다루기.',
     keywords: ['Mapper XML', '#{} vs ${}', '<if>', '<foreach>'],
-    files: [],
+    files: ['ReservationMapper.xml', 'ReservationMapper.java', 'ReservationSearch.java', 'Reservation.java', 'ReservationController.java', 'application.yml', 'schema.sql', 'data.sql', 'build.gradle', 'ReservationApplication.java', 'output.txt'],
   },
   {
     id: 'ch11',
@@ -182,7 +182,7 @@ export const SPRING_CHAPTERS: SpringChapter[] = [
     title: 'JPA 기초',
     summary: 'Entity와 Repository, 쿼리 메서드. MyBatis와 무엇이 다른지 비교합니다.',
     keywords: ['@Entity', 'JpaRepository', '쿼리 메서드'],
-    files: [],
+    files: ['Reservation.java', 'ReservationRepository.java', 'ReservationService.java', 'ReservationController.java', 'application.yml', 'build.gradle', 'ReservationApplication.java', 'output.txt'],
   },
   {
     id: 'ch12',
@@ -190,7 +190,7 @@ export const SPRING_CHAPTERS: SpringChapter[] = [
     title: '트랜잭션',
     summary: '@Transactional 기본과 롤백 규칙. checked 예외와 같은 클래스 안 호출에서 생기는 함정.',
     keywords: ['@Transactional', '롤백 규칙', '프록시'],
-    files: [],
+    files: ['ReservationService.java', 'PaymentException.java', 'TransactionController.java', 'Reservation.java', 'ReservationRepository.java', 'application.yml', 'build.gradle', 'ReservationApplication.java', 'output.txt'],
   },
   {
     id: 'ch13',
@@ -198,7 +198,7 @@ export const SPRING_CHAPTERS: SpringChapter[] = [
     title: '연관관계와 N+1',
     summary: '@ManyToOne, @OneToMany와 지연 로딩, 쿼리가 반복되는 N+1 문제와 해결.',
     keywords: ['@ManyToOne', '지연 로딩', 'fetch join'],
-    files: [],
+    files: ['Reservation.java', 'Room.java', 'ReservationRepository.java', 'ReservationService.java', 'ReservationController.java', 'RoomRepository.java', 'application.yml', 'build.gradle', 'ReservationApplication.java', 'output.txt'],
   },
   {
     id: 'ch14',
@@ -206,7 +206,7 @@ export const SPRING_CHAPTERS: SpringChapter[] = [
     title: '외부 API 호출',
     summary: 'RestClient로 다른 서버를 호출하고, 타임아웃과 실패를 처리합니다(결제·PMS 연동).',
     keywords: ['RestClient', 'RestTemplate', '타임아웃'],
-    files: [],
+    files: ['PaymentClient.java', 'PaymentException.java', 'PaymentController.java', 'FakePaymentGatewayController.java', 'application.yml', 'build.gradle', 'ReservationApplication.java', 'output.txt'],
   },
   {
     id: 'ch15',
@@ -214,15 +214,15 @@ export const SPRING_CHAPTERS: SpringChapter[] = [
     title: '로깅과 운영',
     summary: '로그 레벨과 파일 로그, 롤링, 프로필별 설정, Actuator 헬스 체크, jar 배포와 장애 때 로그 읽기.',
     keywords: ['logback', '롤링', 'Actuator', '배포'],
-    files: [],
+    files: ['application.yml', 'TraceIdFilter.java', 'ReservationController.java', 'build.gradle', 'ReservationApplication.java', 'output.txt'],
   },
   {
     id: 'ch16',
     part: '연동·운영·테스트',
     title: '서버 화면 맛보기',
-    summary: 'JSP와 Thymeleaf로 서버에서 HTML을 만드는 방식. JSP 경험과 비교합니다.',
-    keywords: ['Thymeleaf', 'JSP', 'Model'],
-    files: [],
+    summary: 'Thymeleaf와 JSP로 서버에서 HTML을 만드는 방식. 폼 처리, 이스케이프, JSP를 jar로 배포할 때의 함정.',
+    keywords: ['Thymeleaf', 'JSP', '폼 처리', 'XSS'],
+    files: ['ReservationPageController.java', 'reservation-list.html', 'reservation-form.html', 'reservation-list.jsp', 'ReservationForm.java', 'ReservationStore.java', 'Reservation.java', 'build.gradle', 'ReservationApplication.java', 'output.txt'],
   },
   {
     id: 'ch17',

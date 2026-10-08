@@ -1,0 +1,78 @@
+# 1) 서버 상태 확인
+$ curl http://localhost:8080/actuator/health
+{"components":{"diskSpace":{"details":{"total":999156609024,"free":228835663872,"threshold":10485760,"path":"...","exists":true},"status":"UP"},
+ "livenessState":{"status":"UP"},"ping":{"status":"UP"},"readinessState":{"status":"UP"},
+ "ssl":{"details":{"expiringChains":[],"invalidChains":[],"validChains":[]},"status":"UP"}},
+ "groups":["liveness","readiness"],"status":"UP"}
+# show-details: always라서 구성 요소별 상태가 보인다. 기본값(never)이면 {"status":"UP"}만 나온다.
+
+# 2) 예약 조회. 응답 헤더에 추적 ID가 온다.
+$ curl -i http://localhost:8080/reservations/1
+X-Trace-Id: c8f492e7
+예약 1
+
+# 3) 오류 로그. 스택 트레이스까지 남는다.
+$ curl http://localhost:8080/reservations/99
+예약 99
+
+# ---- 콘솔 로그(1~3번 요청) ----
+21:51:56.001 INFO  [] c.e.r.ReservationApplication : Starting ReservationApplication v0.0.1-SNAPSHOT using Java 17.0.20.1 with PID 10092 (...)
+21:51:57.444 INFO  [] o.s.b.a.e.w.EndpointLinksResolver : Exposing 3 endpoints beneath base path '/actuator'
+21:51:57.492 INFO  [] c.e.r.ReservationApplication : Started ReservationApplication in 1.848 seconds (process running for 2.228)
+21:51:59.150 INFO  [75a5429d] c.e.r.w.TraceIdFilter : GET /actuator/health -> 200 (502ms)
+21:51:59.184 INFO  [c8f492e7] c.e.r.ReservationController : 예약 조회 시작 id=1
+21:51:59.205 INFO  [c8f492e7] c.e.r.w.TraceIdFilter : GET /reservations/1 -> 200 (26ms)
+21:51:59.236 INFO  [5b6a96f8] c.e.r.ReservationController : 예약 조회 시작 id=99
+21:51:59.236 ERROR [5b6a96f8] c.e.r.ReservationController : 예약 번호 변환 실패 id=99
+java.lang.NumberFormatException: For input string: "구십구"
+	at java.base/java.lang.NumberFormatException.forInputString(NumberFormatException.java:67)
+	at java.base/java.lang.Integer.parseInt(Integer.java:668)
+	at java.base/java.lang.Integer.parseInt(Integer.java:786)
+	at com.example.reservation.ReservationController.get(ReservationController.java:21)
+	... (스프링·톰캣 호출 경로 생략)
+21:51:59.240 INFO  [5b6a96f8] c.e.r.w.TraceIdFilter : GET /reservations/99 -> 200 (4ms)
+# 서버 시작 로그는 요청 밖이라 [] 빈칸이다.
+# 같은 요청의 로그는 같은 ID를 갖는다. 5b6a96f8로 검색하면 99번 요청의 로그만 모인다.
+# 이 시점에는 level이 info라서 log.debug(...) 줄은 찍히지 않았다.
+
+# 4) 서버를 끄지 않고 로그 레벨 바꾸기
+$ curl http://localhost:8080/actuator/loggers/com.example.reservation
+{"configuredLevel":"INFO","effectiveLevel":"INFO"}
+
+$ curl -X POST -H "Content-Type: application/json" \
+       -d '{"configuredLevel":"DEBUG"}' \
+       http://localhost:8080/actuator/loggers/com.example.reservation
+(204 No Content)
+
+$ curl http://localhost:8080/reservations/2
+예약 2
+
+21:51:59.393 INFO  [bc492886] c.e.r.ReservationController : 예약 조회 시작 id=2
+21:51:59.393 DEBUG [bc492886] c.e.r.ReservationController : DEBUG 로그: 상세 조회 조건 id=2
+21:51:59.393 INFO  [bc492886] c.e.r.w.TraceIdFilter : GET /reservations/2 -> 200 (1ms)
+# 재시작 없이 DEBUG 줄이 나오기 시작했다. 서버를 다시 켜면 설정 파일 값(info)으로 돌아간다.
+
+# 5) 로그 파일 롤링. 300줄씩 4번 기록했다.
+$ curl -X POST http://localhost:8080/logs/burst   (4번 반복)
+
+$ ls logs    (크기는 바이트)
+  2133  reservation-2026-10-08.0.log.gz
+   458  reservation-2026-10-08.1.log.gz
+   452  reservation-2026-10-08.2.log.gz
+   ...  (3번 ~ 14번 생략)
+   406  reservation-2026-10-08.15.log.gz
+  8802  reservation.log
+# 지금 쓰고 있는 파일은 reservation.log 하나다.
+# 10KB를 넘을 때마다 이전 내용이 .0, .1, .2 ... 번호를 붙여 압축 파일로 넘어갔다(모두 16개).
+
+$ head -3 logs/reservation.log
+2026-10-08 21:51:59.593 INFO  [71841888] c.e.r.ReservationController : 대량 로그 238번째 줄 - 롤링 확인용 메시지입니다
+2026-10-08 21:51:59.594 INFO  [71841888] c.e.r.ReservationController : 대량 로그 239번째 줄 - 롤링 확인용 메시지입니다
+2026-10-08 21:51:59.594 INFO  [71841888] c.e.r.ReservationController : 대량 로그 240번째 줄 - 롤링 확인용 메시지입니다
+# 파일 로그는 logging.pattern.file 모양이라 날짜까지 찍힌다.
+
+$ zcat logs/reservation-2026-10-08.0.log.gz | head -1
+2026-10-08 21:51:56.001 INFO  [] c.e.r.ReservationApplication : Starting ReservationApplication v0.0.1-SNAPSHOT ...
+# 가장 오래된 내용은 .0 파일에 있다. 압축 파일은 zcat, zgrep으로 풀지 않고 바로 읽을 수 있다.
+
+# (2026-10-08 실제 실행 결과. 포트는 8080으로 바꿔 적었습니다.)

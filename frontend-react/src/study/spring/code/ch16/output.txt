@@ -1,0 +1,105 @@
+# Thymeleaf 예제(jar). 브라우저 대신 curl로 화면 HTML을 받아 본다. (HTML 주석과 빈 줄은 일부 지웠다)
+
+# 1) 목록 화면
+$ curl http://localhost:8080/reservations
+<h1>예약 목록</h1>
+<table>
+  <tr><th>번호</th><th>예약자</th><th>객실</th><th>숙박</th><th>상태</th></tr>
+  <tr>
+    <td>1</td>
+    <td>김민수</td>
+    <td>오션뷰 디럭스</td>
+    <td>2박</td>
+    <td>확정</td>
+  </tr>
+  <tr>
+    <td>2</td>
+    <td>&lt;b&gt;박지영&lt;/b&gt;</td>
+    <td>스탠다드 트윈</td>
+    <td>1박</td>
+    <td>확정</td>
+  </tr>
+</table>
+<a href="/reservations/new">새 예약</a>
+# th:each가 <tr>을 2번 반복했다. th:if="${message}"는 값이 없어서 <p> 태그가 아예 없다.
+# 2번 예약자는 태그가 이스케이프되어 "<b>박지영</b>" 글자 그대로 보인다(굵게 되지 않음).
+
+# 2) 입력 화면
+$ curl http://localhost:8080/reservations/new
+<form action="/reservations" method="post">
+  <label>예약자 <input type="text" id="guestName" name="guestName" value=""></label>
+  <select id="roomName" name="roomName">
+    <option value="">선택</option>
+    <option value="스탠다드 트윈">스탠다드 트윈</option>
+    <option value="오션뷰 디럭스">오션뷰 디럭스</option>
+    <option value="스위트">스위트</option>
+  </select>
+  <label>숙박 <input type="number" id="nights" name="nights" value="1"></label>
+  <button type="submit">저장</button>
+</form>
+# th:field가 id, name, value를 만들어 줬다. 숙박의 1은 ReservationForm의 기본값이다.
+
+# 3) 빈 값으로 제출 → 같은 화면에 오류 메시지
+$ curl -X POST -d "guestName=" -d "roomName=" -d "nights=0" http://localhost:8080/reservations
+  <label>예약자 <input type="text" id="guestName" name="guestName" value=""></label>
+  <span>이름을 입력하세요</span>
+  ...
+    <option value="" selected="selected">선택</option>
+  ...
+  <span>객실을 고르세요</span>
+  <label>숙박 <input type="number" id="nights" name="nights" value="0"></label>
+  <span>1박 이상이어야 합니다</span>
+# 입력했던 값(0)이 그대로 남아 있고, 필드마다 오류 메시지가 붙었다.
+
+# 4) 올바르게 제출 → 302 리다이렉트
+$ curl -i -X POST --data-urlencode "guestName=이수진" --data-urlencode "roomName=오션뷰 디럭스" -d "nights=3" \
+       http://localhost:8080/reservations
+HTTP/1.1 302
+Set-Cookie: JSESSIONID=0BC97CB05AA110BFC41F8F6F2CB245D9; Path=/; HttpOnly
+Location: http://localhost:8080/reservations;jsessionid=0BC97CB05AA110BFC41F8F6F2CB245D9
+# flash 메시지를 담으려고 세션이 생겼다(쿠키 JSESSIONID).
+# 톰캣은 처음 만든 세션에서는 쿠키가 되는지 몰라서 주소 뒤에도 ;jsessionid=...를 붙인다(정리 5절).
+
+# 5) 리다이렉트된 목록(같은 세션 쿠키로 요청)
+$ curl -b cookies.txt http://localhost:8080/reservations
+<p>3번 예약이 저장되었습니다.</p>
+  ...
+  <tr>
+    <td>3</td>
+    <td>이수진</td>
+    <td>오션뷰 디럭스</td>
+    <td>3박</td>
+    <td>확정</td>
+  </tr>
+
+# 6) 한 번 더 목록을 열면 메시지는 사라진다
+$ curl -b cookies.txt http://localhost:8080/reservations | grep -c "저장되었습니다"
+0
+
+
+# ---- 비교: reservation-list.jsp를 war로 따로 만들어 실행한 결과 ----
+# (build.gradle에 war 플러그인, tomcat-embed-jasper, JSTL을 넣고 뷰 경로를 /WEB-INF/views/*.jsp로 설정)
+
+$ java -jar reservation-0.0.1-SNAPSHOT.war
+$ curl http://localhost:8080/reservations
+  <tr><th>번호</th><th>예약자(c:out)</th><th>예약자(그대로)</th><th>객실</th><th>숙박</th><th>상태</th></tr>
+  ...
+    <tr>
+      <td>2</td>
+      <td>&lt;b&gt;박지영&lt;/b&gt;</td>
+      <td><b>박지영</b></td>
+      ...
+# c:out은 이스케이프했고, ${r.guestName}을 그대로 쓴 칸은 <b> 태그가 살아서 굵게 보인다.
+# 이 자리에 <script>가 들어 있었다면 그대로 실행된다(XSS).
+
+# 같은 프로젝트를 jar(bootJar)로 만들면?
+$ cd ch16jsp && java -jar build/libs/reservation-0.0.1-SNAPSHOT.jar      # 프로젝트 폴더에서 실행
+[HTTP 200] 화면이 정상으로 나온다
+
+$ cd elsewhere && java -jar reservation-0.0.1-SNAPSHOT.jar               # 다른 폴더로 옮겨서 실행
+{"timestamp":"...","status":404,"error":"Not Found","path":"/reservations"}
+# jar 안에는 JSP 파일이 들어가지 않는다(src/main/webapp은 war에만 들어감).
+# 프로젝트 폴더에서는 스프링 부트가 src/main/webapp 폴더를 직접 찾아 써서 되는 것처럼 보였을 뿐이다.
+# "내 PC에서는 되는데 서버에 올리면 404"가 되는 전형적인 경우다.
+
+# (2026-10-08 실제 실행 결과. 포트는 8080으로 바꿔 적었습니다.)

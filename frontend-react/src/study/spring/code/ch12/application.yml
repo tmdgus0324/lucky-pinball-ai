@@ -1,0 +1,14 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:reservation
+    username: sa
+    password:
+  jpa:
+    hibernate:
+      ddl-auto: create
+    open-in-view: false
+
+logging:
+  level:
+    # 트랜잭션이 언제 시작되고, 커밋·롤백되는지 로그로 본다
+    org.springframework.orm.jpa.JpaTransactionManager: debug

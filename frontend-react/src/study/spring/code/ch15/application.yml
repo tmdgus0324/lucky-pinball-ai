@@ -1,0 +1,33 @@
+spring:
+  application:
+    name: reservation
+
+logging:
+  # 로그 줄마다 요청 추적 ID를 넣는다(TraceIdFilter가 MDC에 넣은 값). 요청 밖이면 빈칸.
+  pattern:
+    console: "%d{HH:mm:ss.SSS} %-5level [%X{traceId:-}] %logger{20} : %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%X{traceId:-}] %logger{36} : %msg%n"
+  file:
+    # 파일 로그. 콘솔에도 계속 찍힌다.
+    name: logs/reservation.log
+  logback:
+    rollingpolicy:
+      # 파일이 이 크기를 넘으면 새 파일로 넘어가고 이전 파일은 압축한다(예제는 일부러 작게).
+      max-file-size: 10KB
+      # 넘어간 파일 이름 규칙. 날짜별, 같은 날 안에서는 번호(%i)로 나뉜다.
+      file-name-pattern: logs/reservation-%d{yyyy-MM-dd}.%i.log.gz
+      # 며칠 치를 남길지. 지난 파일은 자동으로 지운다.
+      max-history: 30
+  level:
+    com.example.reservation: info
+
+management:
+  endpoints:
+    web:
+      exposure:
+        # 웹으로 열 actuator 주소. 기본은 health만 열린다.
+        include: health,info,loggers
+  endpoint:
+    health:
+      # 구성 요소별(디스크, DB 등) 상태까지 보여 준다. 외부에 공개된 서버라면 never나 when-authorized로 둔다.
+      show-details: always

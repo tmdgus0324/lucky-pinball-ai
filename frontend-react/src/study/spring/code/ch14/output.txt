@@ -1,0 +1,35 @@
+# 가짜 결제 서버에 카드 값을 바꿔 가며 결제를 요청한다. 연결 대기 1초, 응답 대기 2초.
+
+$ curl -X POST "http://localhost:8080/reservations/1/pay?card=OK"
+{"result":"승인 A-1","elapsedMs":118}
+
+$ curl -X POST "http://localhost:8080/reservations/1/pay?card=LIMIT"        # 결제 서버가 400
+{"result":"REJECTED: 결제 거절(400)","elapsedMs":4}
+WARN PaymentController : 결제 실패 [REJECTED] 결제 거절(400)
+
+$ curl -X POST "http://localhost:8080/reservations/1/pay?card=BROKEN"       # 결제 서버가 500
+{"result":"SERVER_ERROR: 결제 서버 오류(500)","elapsedMs":3}
+WARN PaymentController : 결제 실패 [SERVER_ERROR] 결제 서버 오류(500)
+
+$ curl -X POST "http://localhost:8080/reservations/1/pay?card=SLOW"         # 결제 서버가 5초 뒤에 응답
+{"result":"UNAVAILABLE: 결제 서버 연결 실패(HttpTimeoutException)","elapsedMs":2007}
+WARN PaymentController : 결제 실패 [UNAVAILABLE] 결제 서버 연결 실패(HttpTimeoutException)
+# 5초를 기다리지 않고 응답 대기 시간(2초)에서 끊었다.
+
+$ curl -X POST "http://localhost:8080/reservations/1/pay?card=OK&down=true" # 꺼진 서버
+{"result":"UNAVAILABLE: 결제 서버 연결 실패(ConnectException)","elapsedMs":3}
+WARN PaymentController : 결제 실패 [UNAVAILABLE] 결제 서버 연결 실패(ConnectException)
+
+
+# ---- 처음에 SimpleClientHttpRequestFactory로 만들었을 때의 SLOW 결과 ----
+# 시간 초과는 났지만 ResourceAccessException이 아니라 RestClientException으로 감싸져 올라와서,
+# catch를 빠져나가 500이 됐다.
+$ curl -X POST "http://localhost:8080/reservations/1/pay?card=SLOW"
+{"timestamp":"...","status":500,"error":"Internal Server Error","path":"/reservations/1/pay"}
+ERROR dispatcherServlet : ... threw exception [Request processing failed:
+      org.springframework.web.client.RestClientException: Error while extracting response for type
+      [com.example.reservation.payment.PaymentClient$PayResponse] and content type [application/octet-stream]] with root cause
+java.net.SocketTimeoutException: Read timed out
+	at ...DefaultRestClient$DefaultConvertibleClientHttpResponse.getHeaders(DefaultRestClient.java:978)
+
+# (2026-10-08 실제 실행 결과. 포트는 8080으로 바꿔 적었습니다.)

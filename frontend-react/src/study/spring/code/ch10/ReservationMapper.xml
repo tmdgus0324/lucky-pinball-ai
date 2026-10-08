@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!-- src/main/resources/mapper/ReservationMapper.xml -->
+<!-- namespace는 Mapper 인터페이스의 전체 이름과 같아야 한다 -->
+<mapper namespace="com.example.reservation.reservation.ReservationMapper">
+
+    <!-- 컬럼과 필드를 직접 연결하는 방법. 이름이 많이 다르거나 조인 결과를 담을 때 쓴다 -->
+    <resultMap id="reservationMap" type="com.example.reservation.reservation.Reservation">
+        <id property="id" column="id"/>
+        <result property="roomId" column="room_id"/>
+        <result property="guestName" column="guest_name"/>
+        <result property="checkIn" column="check_in"/>
+        <result property="nights" column="nights"/>
+        <result property="status" column="status"/>
+    </resultMap>
+
+    <!-- #{id}: 값이 ? 자리에 따로 들어간다(PreparedStatement). 항상 이것을 쓴다 -->
+    <select id="findById" resultMap="reservationMap">
+        SELECT id, room_id, guest_name, check_in, nights, status
+          FROM reservation
+         WHERE id = #{id}
+    </select>
+
+    <!-- 동적 SQL: 값이 있는 조건만 붙인다. <where>는 앞의 AND를 알아서 정리한다 -->
+    <select id="search" resultMap="reservationMap">
+        SELECT id, room_id, guest_name, check_in, nights, status
+          FROM reservation
+        <where>
+            <if test="guestName != null and guestName != ''">
+                AND guest_name LIKE '%' || #{guestName} || '%'
+            </if>
+            <if test="roomIds != null and roomIds.size() > 0">
+                AND room_id IN
+                <foreach collection="roomIds" item="roomId" open="(" separator="," close=")">
+                    #{roomId}
+                </foreach>
+            </if>
+            <if test="from != null">
+                AND check_in &gt;= #{from}
+            </if>
+            <if test="status != null">
+                AND status = #{status}
+            </if>
+        </where>
+         ORDER BY check_in
+    </select>
+
+    <!-- useGeneratedKeys: DB가 만든 id를 reservation.id에 다시 넣어 준다 -->
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO reservation (room_id, guest_name, check_in, nights, status)
+        VALUES (#{roomId}, #{guestName}, #{checkIn}, #{nights}, #{status})
+    </insert>
+
+    <update id="updateStatus">
+        UPDATE reservation
+           SET status = #{status}
+         WHERE id = #{id}
+    </update>
+
+    <!-- 위험: ${}는 값을 SQL 글자에 그대로 이어 붙인다. 입력값으로 SQL을 바꿀 수 있다(SQL 주입) -->
+    <select id="findByGuestNameUnsafe" resultType="com.example.reservation.reservation.Reservation">
+        SELECT id, room_id, guest_name, check_in, nights, status
+          FROM reservation
+         WHERE guest_name = '${guestName}'
+    </select>
+</mapper>

@@ -1,0 +1,31 @@
+# 데이터: 객실 3개, 예약 6개(객실마다 2개). 요청마다 실행된 SQL을 센다.
+
+# 1) N+1: 예약 목록 1번 + 객실 조회 3번 = 4번
+$ curl http://localhost:8080/reservations/n-plus-one
+[{"guestName":"김민수","roomName":"오션뷰 디럭스"},{"guestName":"이영희","roomName":"패밀리 스위트"},...6건]
+DEBUG org.hibernate.SQL : select r1_0.id,r1_0.guest_name,r1_0.room_id from reservation r1_0
+DEBUG org.hibernate.SQL : select r1_0.id,r1_0.name from room r1_0 where r1_0.id=?
+DEBUG org.hibernate.SQL : select r1_0.id,r1_0.name from room r1_0 where r1_0.id=?
+DEBUG org.hibernate.SQL : select r1_0.id,r1_0.name from room r1_0 where r1_0.id=?
+# 예약은 6개인데 객실 조회가 3번인 것은, 한 번 가져온 객실은 같은 트랜잭션 안에서 다시 조회하지 않기 때문이다.
+# 객실이 모두 다르면 예약 수만큼(N번) 나간다.
+
+# 2) fetch join: 1번
+$ curl http://localhost:8080/reservations/fetch-join
+[...같은 6건...]
+DEBUG org.hibernate.SQL : select r1_0.id,r1_0.guest_name,r2_0.id,r2_0.name
+                          from reservation r1_0 join room r2_0 on r2_0.id=r1_0.room_id
+
+# 3) @EntityGraph: 1번 (left join으로 만들어진다)
+$ curl http://localhost:8080/reservations/entity-graph
+[{"guestName":"김민수","roomName":"오션뷰 디럭스"},{"guestName":"김하늘","roomName":"오션뷰 디럭스"}]
+DEBUG org.hibernate.SQL : select r1_0.id,r1_0.guest_name,r2_0.id,r2_0.name
+                          from reservation r1_0 left join room r2_0 on r2_0.id=r1_0.room_id where r1_0.guest_name like ? escape '\'
+
+# 4) 트랜잭션이 끝난 뒤 지연 로딩 → 오류
+$ curl http://localhost:8080/reservations/lazy-error   → 500
+DEBUG org.hibernate.SQL : select r1_0.id,r1_0.guest_name,r1_0.room_id from reservation r1_0
+ERROR dispatcherServlet : Servlet.service() ... threw exception [Request processing failed:
+      org.hibernate.LazyInitializationException: Could not initialize proxy [com.example.reservation.reservation.Room#1] - no session]
+
+# (2026-10-08 실제 실행 결과. 포트는 8080으로 바꿔 적었습니다.)

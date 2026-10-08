@@ -1,0 +1,55 @@
+# Mapper 패키지를 debug로 열어 두어서, 요청마다 실행된 SQL과 파라미터가 로그에 찍힌다.
+#   ==>  Preparing : 실행한 SQL (값 자리는 ?)
+#   ==> Parameters : ? 자리에 들어간 값(타입)
+#   <==      Total : 조회된 줄 수 / Updates : 바뀐 줄 수
+
+$ curl http://localhost:8080/reservations/1
+{"checkIn":"2026-11-01","guestName":"김민수","id":1,"nights":2,"roomId":1,"status":"CONFIRMED"}
+DEBUG ReservationMapper.findById : ==>  Preparing: SELECT id, room_id, guest_name, check_in, nights, status FROM reservation WHERE id = ?
+DEBUG ReservationMapper.findById : ==> Parameters: 1(Long)
+DEBUG ReservationMapper.findById : <==      Total: 1
+
+# ---- 동적 SQL: 조건에 따라 WHERE가 달라진다 ----
+
+$ curl http://localhost:8080/reservations                       → 4건
+DEBUG ReservationMapper.search : ==>  Preparing: SELECT ... FROM reservation ORDER BY check_in
+DEBUG ReservationMapper.search : ==> Parameters:
+
+$ curl "http://localhost:8080/reservations?guestName=김"          → 1건
+DEBUG ReservationMapper.search : ==>  Preparing: SELECT ... FROM reservation WHERE guest_name LIKE '%' || ? || '%' ORDER BY check_in
+DEBUG ReservationMapper.search : ==> Parameters: 김(String)
+
+$ curl "http://localhost:8080/reservations?roomIds=1,2&status=CONFIRMED"   → 2건
+DEBUG ReservationMapper.search : ==>  Preparing: SELECT ... FROM reservation WHERE room_id IN ( ? , ? ) AND status = ? ORDER BY check_in
+DEBUG ReservationMapper.search : ==> Parameters: 1(Long), 2(Long), CONFIRMED(String)
+# <where>가 첫 조건 앞의 AND를 지웠고, <foreach>가 목록을 ( ? , ? )로 펼쳤다.
+
+# ---- 등록과 수정 ----
+
+$ curl ... -d '{"roomId":2,"guestName":"정다은","checkIn":"2026-11-20","nights":2}' .../reservations
+{"checkIn":"2026-11-20","guestName":"정다은","id":5,"nights":2,"roomId":2,"status":"CONFIRMED"}
+DEBUG ReservationMapper.insert : ==>  Preparing: INSERT INTO reservation (room_id, guest_name, check_in, nights, status) VALUES (?, ?, ?, ?, ?)
+DEBUG ReservationMapper.insert : ==> Parameters: 2(Long), 정다은(String), 2026-11-20(LocalDate), 2(Integer), CONFIRMED(String)
+DEBUG ReservationMapper.insert : <==    Updates: 1
+# useGeneratedKeys 덕분에 DB가 만든 id(5)가 응답에 들어 있다.
+
+$ curl -X POST http://localhost:8080/reservations/1/cancel     → 204
+DEBUG ReservationMapper.updateStatus : ==>  Preparing: UPDATE reservation SET status = ? WHERE id = ?
+DEBUG ReservationMapper.updateStatus : ==> Parameters: CANCELED(String), 1(Long)
+DEBUG ReservationMapper.updateStatus : <==    Updates: 1
+
+# ---- ${}의 위험: SQL 주입 ----
+
+$ curl "http://localhost:8080/reservations/unsafe?guestName=김민수"         → 1건
+DEBUG findByGuestNameUnsafe : ==>  Preparing: SELECT ... FROM reservation WHERE guest_name = '김민수'
+DEBUG findByGuestNameUnsafe : ==> Parameters:
+# 값이 ? 가 아니라 SQL 글자 안에 그대로 들어갔다.
+
+$ curl "http://localhost:8080/reservations/unsafe?guestName=' OR '1'='1"   → 5건 (전체!)
+DEBUG findByGuestNameUnsafe : ==>  Preparing: SELECT ... FROM reservation WHERE guest_name = '' OR '1'='1'
+DEBUG findByGuestNameUnsafe : <==      Total: 5
+# 입력값이 SQL의 일부가 되어 조건이 항상 참이 됐다. 다른 사람의 예약이 모두 조회된다.
+
+# (2026-10-08 실제 실행 결과. SELECT 컬럼 목록은 ...으로 줄였고 포트는 8080으로 바꿔 적었습니다.)
+# 응답 JSON의 키가 알파벳 순인 것은 Reservation이 record가 아닌 일반 클래스이고,
+# Spring Boot 4가 쓰는 Jackson 3의 기본 설정이 클래스 필드를 이름순으로 내보내기 때문입니다.

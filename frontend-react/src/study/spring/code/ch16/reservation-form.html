@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <title>새 예약</title>
+</head>
+<body>
+<h1>새 예약</h1>
+
+<!-- th:object: 이 폼이 쓸 객체(컨트롤러의 "form"). 안에서 *{필드}로 그 객체의 값을 쓴다. -->
+<form th:action="@{/reservations}" th:object="${form}" method="post">
+  <p>
+    <label>예약자 <input type="text" th:field="*{guestName}"></label>
+    <!-- 검증 오류가 있을 때만 메시지를 보여 준다(JSP의 <form:errors>) -->
+    <span th:if="${#fields.hasErrors('guestName')}" th:errors="*{guestName}">이름 오류</span>
+  </p>
+  <p>
+    <label>객실
+      <select th:field="*{roomName}">
+        <option value="">선택</option>
+        <option th:each="room : ${rooms}" th:value="${room}" th:text="${room}">객실</option>
+      </select>
+    </label>
+    <span th:if="${#fields.hasErrors('roomName')}" th:errors="*{roomName}">객실 오류</span>
+  </p>
+  <p>
+    <label>숙박 <input type="number" th:field="*{nights}"></label>
+    <span th:if="${#fields.hasErrors('nights')}" th:errors="*{nights}">숙박 오류</span>
+  </p>
+  <button type="submit">저장</button>
+</form>
+</body>
+</html>

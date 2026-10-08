@@ -1,0 +1,9 @@
+payment:
+  # 결제 서버 주소. 예제는 같은 앱 안의 가짜 결제 서버(FakePaymentGatewayController)를 부른다.
+  # 실제로는 PG사 주소를 환경변수로 넣는다(4장).
+  base-url: http://localhost:${server.port}/fake-pg
+  # 꺼져 있는 서버를 흉내 내려고 아무것도 듣지 않는 포트를 가리키는 주소
+  down-url: http://localhost:59999/fake-pg
+  # 연결을 맺기까지 기다리는 시간, 연결 뒤 응답을 기다리는 시간
+  connect-timeout: 1s
+  read-timeout: 2s
