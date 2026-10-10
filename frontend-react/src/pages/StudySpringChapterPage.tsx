@@ -6,6 +6,9 @@ import { SPRING_CHAPTERS, findSpringChapter, isReady } from '../study/spring/cha
 const MarkdownNotes = lazy(() => import('../study/react/NotesView').then((m) => ({ default: m.MarkdownNotes })));
 const SpringCodeView = lazy(() => import('../study/spring/SpringCodeView').then((m) => ({ default: m.SpringCodeView })));
 const LiveRequest = lazy(() => import('../study/spring/LiveRequest').then((m) => ({ default: m.LiveRequest })));
+const StreamVisualizer = lazy(() =>
+  import('../study/spring/StreamVisualizer').then((m) => ({ default: m.StreamVisualizer })),
+);
 
 const notes = import.meta.glob('../study/spring/notes/*.md', { query: '?raw', import: 'default' }) as Record<
   string,
@@ -16,10 +19,11 @@ const projectNotes = import.meta.glob('../study/spring/project/*.md', { query: '
   () => Promise<string>
 >;
 
-type Tab = 'notes' | 'code' | 'project' | 'live';
+type Tab = 'notes' | 'code' | 'visual' | 'project' | 'live';
 const TAB_LABELS: Record<Tab, string> = {
   notes: '정리',
   code: '코드',
+  visual: 'Stream 시각화',
   project: '이 프로젝트에서는',
   live: '직접 요청',
 };
@@ -35,7 +39,13 @@ export function StudySpringChapterPage() {
     return <Navigate to="/study/spring" replace />;
   }
 
-  const tabs: Tab[] = ['notes', 'code', 'project', ...(chapter.live ? (['live'] as Tab[]) : [])];
+  const tabs: Tab[] = [
+    'notes',
+    'code',
+    ...(chapter.visual ? (['visual'] as Tab[]) : []),
+    'project',
+    ...(chapter.live ? (['live'] as Tab[]) : []),
+  ];
   const tab = tabs.find((t) => t === searchParams.get('tab')) ?? 'notes';
   const ready = SPRING_CHAPTERS.filter(isReady);
   const index = ready.indexOf(chapter);
@@ -75,6 +85,7 @@ export function StudySpringChapterPage() {
             <MarkdownNotes noteKey={`spring-${chapter.id}`} loader={notes[`../study/spring/notes/${chapter.id}.md`]} />
           )}
           {tab === 'code' && <SpringCodeView key={chapter.id} chapter={chapter} />}
+          {tab === 'visual' && chapter.visual === 'stream' && <StreamVisualizer />}
           {tab === 'project' && (
             <MarkdownNotes
               noteKey={`spring-project-${chapter.id}`}

@@ -1,0 +1,153 @@
+# 네 파일 모두 스프링 없이 자바만으로 실행했다(Java 17).
+
+$ java LambdaBasics.java
+== 1. 익명 클래스 → 람다 → 메서드 참조 ==
+익명 클래스  [이수진(3박), 김민수(2박), 박지영(1박)]
+람다         [박지영(1박), 김민수(2박), 이수진(3박)]
+메서드 참조  [이수진(3박), 김민수(2박), 박지영(1박)]
+
+== 2. 자주 쓰는 함수형 인터페이스 ==
+Predicate  김민수 2박 이상? true, 박지영 2박 이상? false
+Function   이수진
+Consumer   김민수 출력
+Supplier   Reservation[id=9, guestName=견본, room=스위트, nights=1]
+BiFunction 180000원 × 3박 = 540000
+
+== 3. 직접 만든 함수형 인터페이스 ==
+주말        216000
+주말 + 회원 206000
+
+== 4. 람다 안에서 바깥 변수 쓰기 ==
+2박 이상: [이수진, 김민수]
+
+== 5. 메서드 참조 네 가지 ==
+객체의 메서드  김민수
+static 메서드  180001
+생성자         [] (새 ArrayList)
+
+
+$ java StreamBasics.java
+== 1. 같은 일을 for문과 Stream으로: 확정된 예약의 예약자 이름 ==
+for문   [김민수, 이수진, 최현우, 한지민]
+Stream  [김민수, 이수진, 최현우, 한지민]
+
+== 2. 자주 쓰는 연산 ==
+숙박 긴 순   [정다은(4박), 이수진(3박), 김민수(2박), 최현우(2박), 박지영(1박), 한지민(1박)]
+객실 종류    [오션뷰, 스탠다드, 스위트]
+확정 건수    4
+확정 숙박 합 8
+4박 이상 있음? true
+첫 스위트    최현우
+
+== 3. 모으기(Collectors) ==
+객실별 건수      {오션뷰=3, 스탠다드=2, 스위트=1}
+객실별 숙박 합   {오션뷰=9, 스탠다드=2, 스위트=2}
+확정/취소로 나누기 {false=[박지영, 정다은], true=[김민수, 이수진, 최현우, 한지민]}
+이름 이어 붙이기 [김민수, 박지영, 이수진, 최현우, 정다은, 한지민]
+
+== 4. 자주 만나는 예외 ==
+다시 사용  IllegalStateException: stream has already been operated upon or closed
+toList에 추가  UnsupportedOperationException
+toMap 키 중복  IllegalStateException: Duplicate key 오션뷰 (attempted merging values 김민수 and 이수진)
+합치는 방법 지정 {오션뷰=김민수, 이수진, 정다은, 스탠다드=박지영, 한지민, 스위트=최현우}
+# 숙박이 같은 김민수·최현우(2박)는 원래 순서 그대로 남았다(정렬이 순서를 흩트리지 않음).
+# groupingBy와 toMap의 결과는 HashMap이라 키 순서가 보장되지 않는다. 순서가 필요하면 TreeMap이나 LinkedHashMap을 지정한다.
+
+
+$ java StreamOrder.java
+== A. filter → map → toList ==
+1번 김민수 꺼냄
+  filter 확정? 통과
+  map → 김민수
+2번 박지영 꺼냄
+  filter 확정? 걸러짐
+3번 이수진 꺼냄
+  filter 확정? 통과
+  map → 이수진
+4번 최현우 꺼냄
+  filter 확정? 통과
+  map → 최현우
+5번 정다은 꺼냄
+  filter 확정? 걸러짐
+6번 한지민 꺼냄
+  filter 확정? 통과
+  map → 한지민
+결과 [김민수, 이수진, 최현우, 한지민]
+# filter를 6번 다 하고 나서 map을 하는 것이 아니다. 요소 하나가 filter → map을 끝까지 지나간 뒤 다음 요소를 꺼낸다.
+
+== B. filter → map → limit(2) → toList ==
+1번 김민수 꺼냄
+  filter 2박 이상? 통과
+  map → 김민수
+2번 박지영 꺼냄
+  filter 2박 이상? 걸러짐
+3번 이수진 꺼냄
+  filter 2박 이상? 통과
+  map → 이수진
+결과 [김민수, 이수진]
+# 2개가 차자 멈췄다. 4~6번은 꺼내지도 않았다.
+
+== C. sorted → map → toList ==
+1번 김민수 꺼냄 → sorted가 모아 둠
+2번 박지영 꺼냄 → sorted가 모아 둠
+3번 이수진 꺼냄 → sorted가 모아 둠
+4번 최현우 꺼냄 → sorted가 모아 둠
+5번 정다은 꺼냄 → sorted가 모아 둠
+6번 한지민 꺼냄 → sorted가 모아 둠
+  map → 박지영(1박)
+  map → 한지민(1박)
+  map → 김민수(2박)
+  map → 최현우(2박)
+  map → 이수진(3박)
+  map → 정다은(4박)
+결과 [박지영, 한지민, 김민수, 최현우, 이수진, 정다은]
+# sorted는 전부 받아야 순서를 정할 수 있어서, 여기서는 6개를 모두 모은 뒤에야 map이 시작됐다.
+
+== D. groupingBy(객실, counting) ==
+1번 김민수 꺼냄 → 오션뷰 칸 +1
+2번 박지영 꺼냄 → 스탠다드 칸 +1
+3번 이수진 꺼냄 → 오션뷰 칸 +1
+4번 최현우 꺼냄 → 스위트 칸 +1
+5번 정다은 꺼냄 → 오션뷰 칸 +1
+6번 한지민 꺼냄 → 스탠다드 칸 +1
+결과 {오션뷰=3, 스탠다드=2, 스위트=1}
+
+
+$ java OptionalBasics.java
+== 1. 값 꺼내기 ==
+1번 있음?        true
+9번 있음?        false
+1번 이름(map)    김민수
+9번 이름(map)    없음
+2번이 있으면 실행 박지영
+
+== 2. orElse와 orElseGet의 차이 ==
+orElse, 값 있음
+    (defaultName() 실행됨)
+  결과 김민수
+orElseGet, 값 있음
+  결과 김민수
+orElseGet, 값 없음
+    (defaultName() 실행됨)
+  결과 손님
+# orElse(defaultName())은 값이 있어도 defaultName()을 먼저 실행한다(인자를 먼저 계산하기 때문).
+# orElseGet은 값이 없을 때만 실행한다. 기본값을 만드는 데 DB 조회 같은 비용이 들면 orElseGet을 쓴다.
+
+== 3. 없으면 예외 ==
+orElseThrow  없는 예약입니다: 9
+get()        NoSuchElementException: No value present
+
+== 4. null을 감쌀 때 ==
+ofNullable(null) Optional.empty
+of(null)         NullPointerException
+
+
+# ---- LambdaBasics.java에서 "minNights = 3;"의 주석을 풀었을 때 ----
+$ java LambdaBasics.java
+LambdaBasics.java:71: error: local variables referenced from a lambda expression must be final or effectively final
+        Predicate<Reservation> atLeast = r -> r.nights() >= minNights;
+                                                            ^
+1 error
+# 람다가 쓰는 바깥 지역 변수는 선언 뒤에 값을 바꾸면 안 된다(사실상 final).
+
+# (2026-10-10 실제 실행 결과)

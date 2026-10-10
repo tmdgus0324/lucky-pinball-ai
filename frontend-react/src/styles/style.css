@@ -867,16 +867,25 @@ table.admin-table th {
 
 .study-tabs {
   display: flex;
+  flex-wrap: wrap;
   gap: 6px;
   margin-bottom: 14px;
 }
 
+/* 탭이 많으면 글자 단위로 줄이 바뀌지 않고 탭 단위로 다음 줄로 넘어가게 한다 */
 .study-tab {
   background: var(--panel);
   color: var(--muted);
   border: 1px solid var(--border);
   padding: 8px 18px;
   font-weight: 600;
+  white-space: nowrap;
+}
+
+@media (max-width: 720px) {
+  .study-tab {
+    padding: 8px 12px;
+  }
 }
 
 .study-tab.active {
@@ -1213,4 +1222,223 @@ table.admin-table th {
 
 .live-status strong {
   color: var(--accent);
+}
+
+/* 18장 Stream 시각화 */
+.stream-viz h4 {
+  margin: 16px 0 8px;
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.stream-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.stream-pipeline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  list-style: none;
+  margin: 14px 0 8px;
+  padding: 0;
+  font-family: Consolas, "D2Coding", monospace;
+  font-size: 13px;
+}
+
+.stream-pipeline li {
+  padding: 5px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel-2);
+  color: var(--muted);
+}
+
+.stream-pipeline li + li::before {
+  content: "→";
+  margin: 0 8px 0 -2px;
+  color: var(--muted);
+}
+
+.stream-pipeline li.on {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.stream-now {
+  min-height: 1.6em;
+  margin: 6px 0 10px;
+  font-family: Consolas, "D2Coding", monospace;
+  font-size: 14px;
+  color: var(--text);
+}
+
+.stream-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.stream-controls button {
+  padding: 7px 14px;
+  font-size: 13px;
+}
+
+.stream-counter {
+  margin-left: 4px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.stream-board {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  gap: 16px;
+}
+
+@media (max-width: 720px) {
+  .stream-board {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.stream-items {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.stream-item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel-2);
+  font-size: 13px;
+}
+
+.stream-item-name {
+  font-weight: 600;
+}
+
+.stream-item-info {
+  color: var(--muted);
+}
+
+.stream-item-state {
+  margin-left: auto;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.stream-item.current {
+  border-color: var(--accent);
+}
+
+.stream-item.current .stream-item-state {
+  color: var(--accent);
+}
+
+.stream-item.dropped {
+  opacity: 0.6;
+}
+
+.stream-item.dropped .stream-item-name {
+  text-decoration: line-through;
+}
+
+.stream-item.dropped .stream-item-state {
+  color: var(--danger);
+}
+
+.stream-item.held .stream-item-state {
+  color: var(--accent-2);
+}
+
+.stream-item.passed .stream-item-state {
+  color: var(--ok);
+}
+
+.stream-item.skipped {
+  opacity: 0.45;
+  border-style: dashed;
+}
+
+.stream-result,
+.stream-map {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.stream-result li,
+.stream-map li {
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel-2);
+  font-size: 13px;
+}
+
+.stream-map li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.stream-map li span:first-child {
+  width: 5em;
+}
+
+.stream-bar {
+  height: 10px;
+  border-radius: 5px;
+  background: var(--accent);
+  transition: width 0.2s;
+}
+
+.stream-result li.stream-empty,
+.stream-map li.stream-empty {
+  color: var(--muted);
+  border-style: dashed;
+}
+
+.stream-point {
+  margin: 10px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+  word-break: keep-all;
+}
+
+.stream-log {
+  max-height: 220px;
+  overflow: auto;
+  margin: 0;
+  padding: 10px 12px;
+  list-style: none;
+  background: #0b0d11;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-family: Consolas, "D2Coding", monospace;
+  font-size: 12.5px;
+  color: #cfe3cf;
+  white-space: pre-wrap;
+}
+
+.stream-log li.extra {
+  color: var(--muted);
 }

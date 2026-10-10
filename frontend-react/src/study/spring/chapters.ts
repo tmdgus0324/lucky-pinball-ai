@@ -26,6 +26,8 @@ export interface SpringChapter {
   /** 코드 탭에 보여줄 파일 순서(code/chNN/ 안의 파일 이름). 비어 있으면 아직 준비 중인 챕터 */
   files: string[];
   live?: LiveRequestSpec[];
+  /** 브라우저에서 동작을 보여 주는 탭이 있는 챕터(18장의 Stream 시각화) */
+  visual?: 'stream';
 }
 
 export const PARTS = ['스프링 기본', '웹 요청 처리', '데이터', '연동·운영·테스트', '자바 문법'];
@@ -228,17 +230,18 @@ export const SPRING_CHAPTERS: SpringChapter[] = [
     id: 'ch17',
     part: '연동·운영·테스트',
     title: '테스트',
-    summary: 'JUnit 5, @SpringBootTest, @WebMvcTest와 MockMvc로 API를 테스트합니다.',
-    keywords: ['JUnit 5', 'MockMvc', '@SpringBootTest'],
-    files: [],
+    summary: 'JUnit과 Mockito로 단위 테스트, @WebMvcTest와 MockMvc로 컨트롤러 테스트, @SpringBootTest로 통합 테스트를 만듭니다.',
+    keywords: ['JUnit', 'Mockito', 'MockMvc', '@SpringBootTest'],
+    files: ['RoomServiceTest.java', 'RoomControllerTest.java', 'RoomPriceIntegrationTest.java', 'RoomService.java', 'RoomController.java', 'RoomRepository.java', 'AppConfig.java', 'Room.java', 'build.gradle', 'ReservationApplication.java', 'output.txt'],
   },
   {
     id: 'ch18',
     part: '자바 문법',
     title: '람다식과 Stream',
-    summary: '함수형 인터페이스, 람다 문법, 메서드 참조, Stream의 filter·map·collect, Optional.',
+    summary: '함수형 인터페이스, 람다 문법, 메서드 참조, Stream의 filter·map·collect, Optional. Stream 처리 순서를 화면에서 한 단계씩 봅니다.',
     keywords: ['람다', 'Stream', 'Optional'],
-    files: [],
+    files: ['LambdaBasics.java', 'StreamBasics.java', 'StreamOrder.java', 'OptionalBasics.java', 'output.txt'],
+    visual: 'stream',
   },
 ];
 

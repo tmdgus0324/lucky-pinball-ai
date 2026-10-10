@@ -243,3 +243,43 @@ React 학습 페이지처럼, Spring Boot 기초를 공부하는 페이지를 �
 - 10~16장 예제를 현재 소스로 다시 빌드했다. 11장은 주석을 고친 뒤라 다시 실행해 실행 결과와 같은지 확인했다.
 - 정리·프로젝트 탭의 참고 링크 20개를 열어 모두 200이었다.
 - `tsc`, lint, 빌드 통과. 1280px에서 10~16장의 모든 파일 탭을, 390px에서 4개 장을 Playwright로 열었다. 가로 스크롤, 취소선, 화면 오류는 없었다. 17·18장은 "준비 중"으로 눌리지 않는다.
+
+---
+
+## [2026-10-10] 공부하기 > Spring Boot 17~18장 (18장 완성)
+
+17장(테스트)과 18장(람다식과 Stream)을 만들어 18장이 모두 열린다.
+
+### 1. 17장 테스트
+
+3장의 "금요일 가격" 코드를 그대로 가져와 테스트 세 종류를 붙였다.
+
+| 테스트 | 종류 | 걸린 시간 |
+|---|---|---|
+| `RoomServiceTest` | 단위(Mockito, 고정된 `Clock`, `@ParameterizedTest`) | 6개 0.35초 |
+| `RoomControllerTest` | `@WebMvcTest` + MockMvc + `@MockitoBean` | 3개 0.48초 |
+| `RoomPriceIntegrationTest` | `@SpringBootTest` + `@TestConfiguration`의 `@Primary` 시계 | 2개 1.66초 |
+
+실행 스크립트에 `test` 모드를 더해 `./gradlew test`를 돌렸다. 실행해 보고 알게 된 것이다.
+
+- Boot 4.1.1에는 JUnit 6.0.3, Mockito 5.23.0, AssertJ 3.27.7이 들어 있다.
+- `@MockBean`은 Boot 4에서 없어졌다(jar에서 확인). `@MockitoBean`을 쓴다. 빼면 `No qualifying bean of type 'RoomService'`로 테스트가 시작하지 못하는 것도 확인했다.
+- JUnit 6부터 `@ParameterizedTest` 이름의 문자열 값에 따옴표가 붙는다(`"2026-10-08"`). `quoteTextArguments = false`로 껐다.
+- 금요일 조건을 일부러 지우자 서비스 단위 테스트와 통합 테스트 3개가 실패했고, 서비스를 가짜로 바꾼 컨트롤러 테스트는 통과했다. 정리에 "가짜로 바꾼 부분은 그 테스트에서 확인되지 않는다"로 실었다.
+- 윈도우 터미널에서는 Gradle 콘솔의 한글 테스트 이름이 깨졌다. 실행 결과는 테스트 결과 XML(UTF-8)에서 옮겼다.
+
+### 2. 18장 람다식과 Stream
+
+예제 네 개(`LambdaBasics`, `StreamBasics`, `StreamOrder`, `OptionalBasics`)는 스프링 없이 `java 파일.java`로 실행했다. `limit(2)`가 4~6번을 꺼내지도 않는 것, `sorted`가 6개를 다 모은 뒤에야 다음으로 넘기는 것, `orElse`가 값이 있어도 기본값 메서드를 실행하는 것, `toMap` 키 중복과 `groupingBy` null 키 예외 문구를 실제 출력으로 확인했다.
+
+"Stream 시각화" 탭(`StreamVisualizer.tsx`)을 새로 만들었다. 예약 6건이 filter → map, limit(2), sorted, groupingBy를 지나가는 순서를 한 단계씩(또는 자동 재생으로) 보여 준다. Java에서는 찍히지 않고 화면에만 있는 단계(toList에 담음, 정렬, 멈춤)는 흐리게 표시했다. Playwright로 네 예제를 끝까지 넘기고, 흐리지 않은 기록 줄이 `StreamOrder.java` 실행 결과와 한 줄씩 같은지 비교해서 모두 같았다.
+
+### 3. 함께 고친 것
+
+390px에서 18장은 탭이 4개라 탭 글자가 "정/리"처럼 한 글자씩 줄이 바뀌었다. 탭에 `white-space: nowrap`과 줄바꿈(`flex-wrap`)을 줘서 탭 단위로 다음 줄로 넘어가게 했다. 탭이 4개인 6~8장("직접 요청")도 같은 구조라 함께 확인했고, 지금은 네 번째 탭이 다음 줄로 넘어간다.
+
+### 4. 검증
+
+- 17장 `./gradlew test` 11개 통과, 18장 예제 네 개 실행.
+- 참고 링크 9개 모두 200.
+- `tsc`, lint, 빌드 통과. 1280px·390px에서 17·18장의 모든 탭과 파일, 시각화 네 예제, 자동 재생·멈춤을 Playwright로 확인했다. 가로 스크롤과 화면 오류는 없었다.
