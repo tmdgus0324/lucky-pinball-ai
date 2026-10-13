@@ -2,14 +2,14 @@ import { lazy, type ComponentType, type LazyExoticComponent } from 'react';
 
 /**
  * "공부하기 > React" 챕터 목록.
- * 데모 컴포넌트는 02_React_basic(React_basic 저장소)의 chapter_03~15를 그대로 복사한 것이고,
+ * 데모 컴포넌트는 02_React_basic(React_basic 저장소)의 chapter_03~15를 그대로 복사한 것이고(16장만 새로 만든 장),
  * 원본에서 index.js의 주석으로 하나씩 갈아 끼우던 실행 부분을 이 목록이 대신한다.
  *
  * 번호: 폴더(chapter_NN)는 README의 "섹션"보다 번호가 하나 작다(폴더 03 = README 섹션4 JSX … 폴더 15 = README ch16 CSS).
  * 화면에는 폴더 번호를 쓰고, 정리(notes)는 폴더 번호 기준 파일(notes/chNN.md)로 나눠 둔다.
  */
 export interface Chapter {
-  /** URL과 노트 파일 이름에 쓰는 값: ch03 … ch15 */
+  /** URL과 노트 파일 이름에 쓰는 값: ch03 … ch16 */
   id: string;
   /** 원본 폴더 이름 */
   folder: string;
@@ -26,6 +26,8 @@ export interface Chapter {
   console?: boolean;
   /** 데모 아래에 붙이는 안내 문구(원본과 달라진 점 등) */
   demoNote?: string;
+  /** 코드 탭의 파일 순서. 없으면 이름순(16장처럼 읽는 순서가 중요한 챕터만 지정) */
+  files?: string[];
 }
 
 export const CHAPTERS: Chapter[] = [
@@ -167,6 +169,32 @@ export const CHAPTERS: Chapter[] = [
     demo: lazy(() => import('./chapter_15/Blocks')),
     demoNote:
       '원본 코드 그대로라 브라우저 콘솔에 경고 두 가지가 뜹니다: ① 목록에 key가 없음, ② styled-components v6는 backgroundColor 같은 props를 DOM까지 넘겨 "인식하지 못하는 prop" 경고를 냅니다(해결: $backgroundColor처럼 $를 붙인 transient props).',
+  },
+  {
+    // 원본 저장소에 없는 장. JSP에 익숙한 사람을 위해 새로 만들었다(정리도 AI가 씀).
+    id: 'ch16',
+    folder: 'chapter_16',
+    title: 'JSP 화면을 React로(게시판)',
+    summary: '익숙한 main.jsp 게시판을 React 한 파일로 옮긴 뒤, 컴포넌트와 훅으로 나눕니다. 목록·검색·페이징·상세·등록·삭제.',
+    goal: 'main.jsp 한 파일로 만들던 화면을 React에서는 어떻게 옮기고 나누어 조립하는지, 같은 게시판으로 비교해 이해한다.',
+    outcome: 'main.jsp의 script·body 각 부분이 React의 어디(state, useEffect, 함수, JSX, 컴포넌트)에 해당하는지 짚고, 컴포넌트로 나뉜 화면에서 데이터가 흐르는 길을 따라갈 수 있다.',
+    keywords: ['JSP 비교', '컴포넌트 나누기', 'Custom Hook'],
+    demo: lazy(() => import('./chapter_16/BoardDemo')),
+    demoNote:
+      '서버 대신 브라우저 안의 가짜 API(boardApi.js)로 동작해서, 새로고침하면 처음 데이터로 돌아갑니다. 위의 버튼으로 한 파일 버전과 나눈 버전을 바꿔 볼 수 있고, 둘은 같은 데이터를 씁니다.',
+    files: [
+      'main.jsp',
+      'BoardMain.jsx',
+      'BoardPage.jsx',
+      'useBoards.js',
+      'SearchBar.jsx',
+      'BoardTable.jsx',
+      'Pagination.jsx',
+      'BoardDetail.jsx',
+      'BoardForm.jsx',
+      'boardApi.js',
+      'BoardDemo.jsx',
+    ],
   },
 ];
 
