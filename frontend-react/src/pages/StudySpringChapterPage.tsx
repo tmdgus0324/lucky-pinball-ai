@@ -1,6 +1,7 @@
 import { Suspense, lazy } from 'react';
 import { Link, Navigate, useParams, useSearchParams } from 'react-router-dom';
 import { SPRING_CHAPTERS, findSpringChapter, isReady } from '../study/spring/chapters';
+import { StudyGoals } from '../study/StudyGoals';
 
 // 탭 내용은 처음 열 때만 불러온다(마크다운 렌더러와 하이라이터가 무거워서).
 const MarkdownNotes = lazy(() => import('../study/react/NotesView').then((m) => ({ default: m.MarkdownNotes })));
@@ -63,6 +64,8 @@ export function StudySpringChapterPage() {
         <h2>{chapter.title}</h2>
         <p>{chapter.summary}</p>
       </header>
+
+      <StudyGoals goal={chapter.goal} outcome={chapter.outcome} />
 
       <div className="study-tabs" role="tablist">
         {tabs.map((t) => (

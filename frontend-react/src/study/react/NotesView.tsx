@@ -19,7 +19,6 @@ const notes = import.meta.glob('./notes/*.md', { query: '?raw', import: 'default
 
 /** 노트 안에서 AI 코멘트 블록을 알아보는 표식: 인용(>) 블록의 첫 문단이 정확히 이 글자일 때 */
 const AI_MARKER = 'AI 코멘트';
-const AI_PREF_KEY = 'study.showAiComments';
 
 interface Section {
   title: string | null;
@@ -91,14 +90,6 @@ function Pre({ children }: ComponentProps<'pre'>) {
 
 const markdownComponents = { blockquote: Blockquote, pre: Pre };
 
-function readShowAiPreference(): boolean {
-  try {
-    return localStorage.getItem(AI_PREF_KEY) !== 'off';
-  } catch {
-    return true; // 저장소를 못 쓰는 환경(시크릿 모드 등)에서도 기본값(보임)으로 동작한다.
-  }
-}
-
 // 한국어 글은 "5~6장"처럼 범위에 물결표를 자주 쓴다. GFM 기본값은 물결표 하나(~)도 취소선으로 읽어서
 // 두 물결표 사이 글자에 줄이 그어진다. 취소선은 ~~두 개~~일 때만 인식하게 한다.
 const remarkPlugins: ComponentProps<typeof ReactMarkdown>['remarkPlugins'] = [[remarkGfm, { singleTilde: false }]];
@@ -122,7 +113,6 @@ export function NotesView({ chapter }: { chapter: Chapter }) {
  */
 export function MarkdownNotes({ noteKey, loader }: { noteKey: string; loader: (() => Promise<string>) | undefined }) {
   const [loaded, setLoaded] = useState<{ id: string; sections: Section[] } | null>(null);
-  const [showAi, setShowAi] = useState(readShowAiPreference);
   const sections = loaded?.id === noteKey ? loaded.sections : null;
 
   useEffect(() => {
@@ -144,25 +134,9 @@ export function MarkdownNotes({ noteKey, loader }: { noteKey: string; loader: ((
     return <p className="status-text">불러오는 중...</p>;
   }
 
-  const aiCount = sections.reduce((sum, section) => sum + (section.body.match(/^> \*\*AI 코멘트\*\*/gm)?.length ?? 0), 0);
-
-  function toggleAi(next: boolean) {
-    setShowAi(next);
-    try {
-      localStorage.setItem(AI_PREF_KEY, next ? 'on' : 'off');
-    } catch {
-      // 저장하지 못해도 이번 화면에서는 선택이 적용된다.
-    }
-  }
-
+  // AI 코멘트는 항상 보여 준다(예전의 "AI 코멘트 보기" 스위치는 2026-10-13에 없앴다).
   return (
-    <div className={showAi ? 'notes-view' : 'notes-view hide-ai'}>
-      {aiCount > 0 && (
-        <label className="ai-toggle">
-          <input type="checkbox" checked={showAi} onChange={(event) => toggleAi(event.target.checked)} />
-          💬 AI 코멘트 보기 <span className="ai-toggle-count">({aiCount}개)</span>
-        </label>
-      )}
+    <div className="notes-view">
       {sections.map((section, index) =>
         section.title === null ? (
           <div className="notes-intro markdown" key={index}>

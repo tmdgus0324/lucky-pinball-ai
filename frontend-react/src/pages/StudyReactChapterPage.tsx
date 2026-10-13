@@ -3,6 +3,7 @@ import { Link, Navigate, useParams, useSearchParams } from 'react-router-dom';
 import { CHAPTERS, findChapter } from '../study/react/chapters';
 import { ConsolePanel } from '../study/react/ConsolePanel';
 import { IsolatedRoot } from '../study/react/IsolatedRoot';
+import { StudyGoals } from '../study/StudyGoals';
 
 // 코드/정리 탭은 처음 열 때만 불러온다(마크다운 렌더러가 무거워서 챕터 데모 로딩에 끼지 않게).
 const CodeView = lazy(() => import('../study/react/CodeView').then((m) => ({ default: m.CodeView })));
@@ -62,6 +63,8 @@ export function StudyReactChapterPage() {
         <h2>{chapter.title}</h2>
         <p>{chapter.summary}</p>
       </header>
+
+      <StudyGoals goal={chapter.goal} outcome={chapter.outcome} />
 
       <div className="study-tabs" role="tablist">
         {TABS.map((t) => (

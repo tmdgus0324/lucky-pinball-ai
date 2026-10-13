@@ -15,6 +15,10 @@ export interface Chapter {
   folder: string;
   title: string;
   summary: string;
+  /** 학습 목표: 이 챕터에서 무엇을 이해하려고 하는지(1~2줄, 챕터 화면 맨 위에 표시) */
+  goal: string;
+  /** 학습 결과: 다 마치면 할 수 있는 것(1~2줄) */
+  outcome: string;
   /** 이 챕터에서 배우는 키워드(카드에 칩으로 표시) */
   keywords: string[];
   demo: LazyExoticComponent<ComponentType>;
@@ -30,6 +34,8 @@ export const CHAPTERS: Chapter[] = [
     folder: 'chapter_03',
     title: 'JSX와 첫 컴포넌트',
     summary: 'JSX 문법으로 컴포넌트를 만들고, 하나의 컴포넌트(Book)를 여러 번 재사용합니다.',
+    goal: 'JSX가 무엇이고 왜 쓰는지 알고, 컴포넌트 하나를 만들어 여러 번 재사용하는 방법을 익힌다.',
+    outcome: 'JSX 안에 { }로 값을 넣어 화면을 만들고, Book처럼 props만 바꿔 같은 컴포넌트를 여러 번 쓸 수 있다.',
     keywords: ['JSX', '컴포넌트', '재사용'],
     demo: lazy(() => import('./chapter_03/Library')),
   },
@@ -38,6 +44,8 @@ export const CHAPTERS: Chapter[] = [
     folder: 'chapter_04',
     title: '엘리먼트와 렌더링',
     summary: '1초마다 화면을 다시 그려 현재 시간을 보여줍니다. React는 바뀐 부분만 DOM에 반영합니다.',
+    goal: 'React Element가 무엇이고, 화면이 바뀔 때 React가 무엇을 다시 그리는지 이해한다.',
+    outcome: 'Element, Component, DOM Element의 차이를 설명하고, Clock 예제에서 바뀐 글자만 DOM에 반영되는 것을 개발자 도구로 확인할 수 있다.',
     keywords: ['Element', '렌더링', 'Virtual DOM'],
     demo: lazy(() => import('./adapters/ClockDemo')),
     demoNote:
@@ -48,6 +56,8 @@ export const CHAPTERS: Chapter[] = [
     folder: 'chapter_05',
     title: '컴포넌트와 Props',
     summary: '부모가 Props로 값을 넘겨 자식 컴포넌트(Comment)의 출력을 정합니다. 배열은 map으로 목록을 만듭니다.',
+    goal: '부모가 자식에게 값을 넘기는 Props와, Props가 읽기 전용인 이유를 이해한다.',
+    outcome: '배열을 map으로 돌려 Comment 목록을 그리고, Props로 받은 값만 바꿔 다른 내용을 보여 줄 수 있다.',
     keywords: ['Props', 'map', 'key 경고'],
     demo: lazy(() => import('./chapter_05/CommentList')),
     demoNote: '원본 그대로 key를 넣지 않았습니다. 브라우저 콘솔에 key 경고가 뜨는 것이 정상입니다(10장에서 다룹니다).',
@@ -57,6 +67,8 @@ export const CHAPTERS: Chapter[] = [
     folder: 'chapter_06',
     title: 'State와 생명주기',
     summary: '클래스 컴포넌트의 state와 생명주기 메서드. 알림이 1초마다 하나씩 추가됩니다.',
+    goal: '컴포넌트가 스스로 기억하는 값(state)과, 화면에 붙고 떨어질 때 실행되는 생명주기를 이해한다.',
+    outcome: 'state를 setState로만 바꿔야 하는 이유를 설명하고, 콘솔 로그로 생명주기 메서드가 불리는 순서를 확인할 수 있다.',
     keywords: ['State', 'setState', '생명주기', 'class'],
     demo: lazy(() => import('./chapter_06/NotificationList')),
     console: true,
@@ -66,6 +78,8 @@ export const CHAPTERS: Chapter[] = [
     folder: 'chapter_07',
     title: 'Hooks',
     summary: 'useState, useEffect와 직접 만든 훅(useCounter)으로 입장/퇴장 인원을 관리합니다.',
+    goal: '함수 컴포넌트에서 state와 생명주기를 다루는 Hook(useState, useEffect)과 Hook의 규칙을 익힌다.',
+    outcome: 'useState로 값을 바꾸고 useEffect로 값이 바뀔 때 할 일을 정하며, 반복되는 로직을 useCounter 같은 Custom Hook으로 뺄 수 있다.',
     keywords: ['useState', 'useEffect', 'Custom Hook'],
     demo: lazy(() => import('./chapter_07/Accommodate')),
     console: true,
@@ -75,6 +89,8 @@ export const CHAPTERS: Chapter[] = [
     folder: 'chapter_08',
     title: '이벤트 처리',
     summary: '같은 버튼을 클래스 컴포넌트와 함수 컴포넌트 두 방식으로 만들어 이벤트 핸들러를 비교합니다.',
+    goal: 'React에서 이벤트 핸들러를 연결하는 방법과, 클래스 컴포넌트의 this 바인딩 문제를 이해한다.',
+    outcome: '같은 버튼을 클래스와 함수 컴포넌트로 만들고, 핸들러에 인자를 넘길 수 있다.',
     keywords: ['onClick', 'this 바인딩', '화살표 함수'],
     demo: lazy(() => import('./adapters/ConfirmButtonsDemo')),
   },
@@ -83,6 +99,8 @@ export const CHAPTERS: Chapter[] = [
     folder: 'chapter_09',
     title: '조건부 렌더링',
     summary: '로그인 여부에 따라 로그인/로그아웃 버튼과 인사말을 다르게 보여줍니다.',
+    goal: '조건에 따라 다른 화면을 보여 주는 방법(if, &&, 삼항 연산자, null 반환)을 익힌다.',
+    outcome: '로그인 여부에 따라 버튼과 인사말을 바꾸고, && 앞에 숫자 0이 오면 화면에 0이 찍히는 함정을 피할 수 있다.',
     keywords: ['조건부 렌더링', '삼항 연산자', '&&'],
     demo: lazy(() => import('./chapter_09/LanginPage')),
   },
@@ -91,6 +109,8 @@ export const CHAPTERS: Chapter[] = [
     folder: 'chapter_10',
     title: '리스트와 키',
     summary: '배열을 map으로 목록으로 바꾸고, 항목을 구분하는 고유한 key를 지정합니다.',
+    goal: '배열을 화면 목록으로 바꾸는 방법과, 항목마다 key가 필요한 이유를 이해한다.',
+    outcome: 'map으로 목록을 그리고, 배열 index 대신 고유한 id를 key로 정할 수 있다.',
     keywords: ['List', 'key', 'map'],
     demo: lazy(() => import('./chapter_10/AttendanceBook')),
   },
@@ -99,6 +119,8 @@ export const CHAPTERS: Chapter[] = [
     folder: 'chapter_11',
     title: '폼',
     summary: '입력값을 state로 관리하는 제어 컴포넌트(textarea, input, select)와 제출 처리.',
+    goal: '입력값을 state로 관리하는 제어 컴포넌트 방식을 익힌다.',
+    outcome: 'input, textarea, select의 값을 state와 onChange로 연결하고, 제출할 때 입력값을 모아 처리할 수 있다.',
     keywords: ['Form', '제어 컴포넌트', 'onChange'],
     demo: lazy(() => import('./chapter_11/SignUp')),
     demoNote: '원본의 오타 import(userState)만 제거했습니다. 번들러에서는 존재하지 않는 이름을 import하면 실행 오류가 납니다.',
@@ -108,6 +130,8 @@ export const CHAPTERS: Chapter[] = [
     folder: 'chapter_12',
     title: 'State 끌어올리기',
     summary: '섭씨/화씨 입력창이 하나의 state를 공유하도록 state를 공통 부모(Calculator)로 올립니다.',
+    goal: '여러 컴포넌트가 같은 값을 써야 할 때 state를 공통 부모로 올리는 방법을 익힌다.',
+    outcome: '섭씨·화씨 입력창이 하나의 값을 공유하도록, state와 값을 바꾸는 함수를 부모에서 내려 줄 수 있다.',
     keywords: ['Shared State', 'Lifting State Up'],
     demo: lazy(() => import('./chapter_12/Calculator')),
   },
@@ -116,6 +140,8 @@ export const CHAPTERS: Chapter[] = [
     folder: 'chapter_13',
     title: '합성(Composition)',
     summary: 'children props로 빈 상자(Card)를 만들고 안에 무엇이든 넣어 쓰는 합성. React는 상속 대신 합성을 씁니다.',
+    goal: 'React가 상속 대신 합성(children)으로 컴포넌트를 재사용하는 방식을 이해한다.',
+    outcome: 'children을 받는 Card 같은 틀 컴포넌트를 만들고, 그 안에 다른 내용을 넣어 여러 곳에 쓸 수 있다.',
     keywords: ['Composition', 'children', 'Specialization'],
     demo: lazy(() => import('./chapter_13/ProfileCard')),
   },
@@ -124,6 +150,8 @@ export const CHAPTERS: Chapter[] = [
     folder: 'chapter_14',
     title: 'Context',
     summary: 'props를 층층이 내려보내지 않고 Context로 테마(라이트/다크)를 필요한 곳에 바로 전달합니다.',
+    goal: 'props를 여러 단계로 내려보내지 않고 필요한 곳에서 값을 꺼내 쓰는 Context를 이해한다.',
+    outcome: 'Provider로 테마 값을 내려 주고, 아래 컴포넌트에서 useContext로 꺼내 라이트·다크 테마를 바꿀 수 있다.',
     keywords: ['Context', 'Provider', 'useContext'],
     demo: lazy(() => import('./chapter_14/DarkOrLight')),
     demoNote: '원본은 화면 전체(100vw × 100vh)를 쓰는 예제라, 웹 데모에서는 아래 상자 크기에 맞춰 보여줍니다.',
@@ -133,6 +161,8 @@ export const CHAPTERS: Chapter[] = [
     folder: 'chapter_15',
     title: '스타일링(styled-components)',
     summary: 'CSS를 JavaScript 안에서 컴포넌트로 만들고, props 값으로 스타일을 바꿉니다.',
+    goal: 'CSS 기본 속성과, CSS를 컴포넌트로 만드는 styled-components 방식을 익힌다.',
+    outcome: 'styled-components로 스타일이 붙은 컴포넌트를 만들고, props 값에 따라 색이나 크기를 바꿀 수 있다.',
     keywords: ['styled-components', 'CSS-in-JS', 'props로 스타일'],
     demo: lazy(() => import('./chapter_15/Blocks')),
     demoNote:
