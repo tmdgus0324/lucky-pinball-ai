@@ -1,0 +1,41 @@
+git --version
+
+# 1) 이름과 이메일. 커밋마다 "누가"로 남는다. --global은 이 PC의 내 계정 전체에 적용된다.
+git config --global user.name "김개발"
+git config --global user.email "dev@example.com"
+git config --global user.name
+
+# 2) 새 저장소의 첫 브랜치 이름. 최근에는 main을 많이 쓴다(예전 저장소는 master).
+git config --global init.defaultBranch main
+
+# 3) 윈도우 줄바꿈. 저장소에는 LF로 넣고, 내 PC로 꺼낼 때는 CRLF로 바꾼다.
+git config --global core.autocrlf true
+
+# 4) 한글 파일 이름이 "\354\230\210..." 같은 숫자로 보이지 않게 한다.
+git config --global core.quotepath false
+
+# 지금 적용된 설정과, 그 값이 어느 파일에서 왔는지
+git config --list --show-origin
+
+# 저장소마다 다른 값을 쓰려면 그 저장소 안에서 --global 없이 설정한다(저장소의 .git/config에 저장).
+git init shop
+cd shop
+git config user.email "kim@company.example"
+git config --show-origin user.email
+
+# core.autocrlf가 true라서, LF로 만든 파일을 add하면 줄바꿈을 바꾸겠다는 안내가 나온다(오류 아님).
+echo "객실 관리" > README.md
+git add README.md
+git commit -m "첫 커밋"
+cd ..
+
+# 5) 저장소 받기(SVN의 checkout). 여기서는 인터넷 대신 옆 폴더(shop)를 서버처럼 쓴다.
+git clone shop shop-clone
+ls shop-clone
+git -C shop-clone log --oneline
+git -C shop-clone remote -v
+
+# 사내망에서 자주 필요한 설정(예시라서 실행하지 않음. 주소와 경로는 회사 값으로)
+# git config --global http.proxy http://proxy.company.example:8080      프록시를 거쳐야 할 때
+# git config --global http.sslBackend schannel                          윈도우 인증서 저장소의 사내 인증서를 쓸 때
+# git config --global http.sslCAInfo C:/certs/company-ca.pem             인증서 파일을 직접 지정할 때

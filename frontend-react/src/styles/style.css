@@ -1140,9 +1140,12 @@ table.admin-table th {
 }
 
 /* --- 코드 하이라이트 --- */
+/* <code>는 브라우저 기본값이 monospace라 .code-block의 Consolas를 물려받지 않는다. 한국어 윈도우의 크롬은
+   monospace를 굴림체로 그려서 역슬래시(\)가 원화 기호(₩)로 보이므로, 상자의 글꼴을 그대로 쓰게 한다. */
 .code-block code {
   display: block;
   min-width: max-content;
+  font-family: inherit;
 }
 
 .code-block .code-line {

@@ -14,6 +14,11 @@ const StudySpringChapterPage = lazy(() =>
   import('./pages/StudySpringChapterPage').then((m) => ({ default: m.StudySpringChapterPage })),
 );
 
+const StudyGitPage = lazy(() => import('./pages/StudyGitPage').then((m) => ({ default: m.StudyGitPage })));
+const StudyGitChapterPage = lazy(() =>
+  import('./pages/StudyGitChapterPage').then((m) => ({ default: m.StudyGitChapterPage })),
+);
+
 const loading = <p className="status-text">불러오는 중...</p>;
 
 export function App() {
@@ -32,6 +37,11 @@ export function App() {
           <Route
             path="/study/spring/:chapterId"
             element={<Suspense fallback={loading}><StudySpringChapterPage /></Suspense>}
+          />
+          <Route path="/study/git" element={<Suspense fallback={loading}><StudyGitPage /></Suspense>} />
+          <Route
+            path="/study/git/:chapterId"
+            element={<Suspense fallback={loading}><StudyGitChapterPage /></Suspense>}
           />
         </Route>
       </Routes>
